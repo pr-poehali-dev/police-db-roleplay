@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,13 @@ interface User {
   role: string;
 }
 
-const CitizensTab = ({ user }: { user: User }) => {
+interface CitizensTabProps {
+  user: User;
+  citizenIdToOpen?: number | null;
+  onCitizenOpened?: () => void;
+}
+
+const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedCitizen, setSelectedCitizen] = useState<any>(null);
@@ -59,6 +65,13 @@ const CitizensTab = ({ user }: { user: User }) => {
   const [wantedReason, setWantedReason] = useState('');
 
   const canModify = user.role === 'admin' || user.role === 'moderator';
+
+  useEffect(() => {
+    if (citizenIdToOpen) {
+      fetchCitizenDetails(citizenIdToOpen);
+      onCitizenOpened?.();
+    }
+  }, [citizenIdToOpen]);
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
@@ -339,7 +352,11 @@ const CitizensTab = ({ user }: { user: User }) => {
                 </TableHeader>
                 <TableBody>
                   {searchResults.map((citizen) => (
-                    <TableRow key={citizen.id}>
+                    <TableRow 
+                      key={citizen.id}
+                      onClick={() => fetchCitizenDetails(citizen.id)}
+                      className="cursor-pointer hover:bg-blue-50 transition-colors"
+                    >
                       <TableCell className="font-mono">{citizen.id}</TableCell>
                       <TableCell className="font-mono">{citizen.first_name}</TableCell>
                       <TableCell className="font-mono">{citizen.last_name}</TableCell>
@@ -350,7 +367,7 @@ const CitizensTab = ({ user }: { user: User }) => {
                           <Badge variant="destructive" className="font-mono">В РОЗЫСКЕ</Badge>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="outline"
                           size="sm"
@@ -442,19 +459,27 @@ const CitizensTab = ({ user }: { user: User }) => {
       </Dialog>
 
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl h-[95vh] overflow-y-auto">
           {selectedCitizen && (
             <>
-              <DialogHeader>
-                <DialogTitle className="font-mono flex items-center gap-2">
+              <DialogHeader className="relative pb-6 border-b">
+                <DialogTitle className="font-mono flex items-center gap-2 text-2xl font-bold">
                   ДОСЬЕ #{selectedCitizen.id} - {selectedCitizen.first_name} {selectedCitizen.last_name}
                   {selectedCitizen.wanted?.length > 0 && (
                     <Badge variant="destructive" className="font-mono">В РОЗЫСКЕ</Badge>
                   )}
                 </DialogTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0"
+                  onClick={() => setIsDetailsDialogOpen(false)}
+                >
+                  <Icon name="X" className="h-4 w-4" />
+                </Button>
               </DialogHeader>
 
-              <Tabs defaultValue="info" className="w-full">
+              <Tabs defaultValue="info" className="w-full mt-8">
                 <TabsList className="grid grid-cols-5 font-mono">
                   <TabsTrigger value="info">ИНФОРМАЦИЯ</TabsTrigger>
                   <TabsTrigger value="criminal">ПРЕСТУПЛЕНИЯ</TabsTrigger>
@@ -463,8 +488,8 @@ const CitizensTab = ({ user }: { user: User }) => {
                   <TabsTrigger value="wanted">РОЗЫСК</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="info" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <TabsContent value="info" className="space-y-6 mt-6">
+                  <div className="grid grid-cols-2 gap-6 p-6 bg-gray-50 rounded-lg">
                     <div>
                       <Label className="font-mono text-xs text-muted-foreground">ДАТА РОЖДЕНИЯ</Label>
                       <p className="font-mono">{selectedCitizen.date_of_birth}</p>
@@ -488,7 +513,7 @@ const CitizensTab = ({ user }: { user: User }) => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="criminal" className="space-y-4">
+                <TabsContent value="criminal" className="space-y-6 mt-6">
                   {canModify && (
                     <Card className="border-2">
                       <CardHeader>
@@ -559,7 +584,7 @@ const CitizensTab = ({ user }: { user: User }) => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="fines" className="space-y-4">
+                <TabsContent value="fines" className="space-y-6 mt-6">
                   {canModify && (
                     <Card className="border-2">
                       <CardHeader>
@@ -614,7 +639,7 @@ const CitizensTab = ({ user }: { user: User }) => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="warnings" className="space-y-4">
+                <TabsContent value="warnings" className="space-y-6 mt-6">
                   {canModify && (
                     <Card className="border-2">
                       <CardHeader>
@@ -645,7 +670,7 @@ const CitizensTab = ({ user }: { user: User }) => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="wanted" className="space-y-4">
+                <TabsContent value="wanted" className="space-y-6 mt-6">
                   {canModify && (
                     <Card className="border-2">
                       <CardHeader>

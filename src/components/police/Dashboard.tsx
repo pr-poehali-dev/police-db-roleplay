@@ -30,6 +30,12 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
     unpaidFines: 0
   });
   const [wantedList, setWantedList] = useState<any[]>([]);
+  const [citizenIdToOpen, setCitizenIdToOpen] = useState<number | null>(null);
+
+  const handleOpenCitizen = (citizenId: number) => {
+    setCitizenIdToOpen(citizenId);
+    setActiveTab('citizens');
+  };
 
   useEffect(() => {
     localStorage.setItem('policeActiveTab', activeTab);
@@ -135,10 +141,10 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
               </p>
             </div>
             <Button 
-              variant="outline" 
+              variant="destructive" 
               size="sm"
               onClick={onLogout}
-              className="font-mono border-blue-300 text-white hover:bg-blue-800"
+              className="font-mono"
             >
               <Icon name="LogOut" className="w-4 h-4 mr-2" />
               ВЫХОД
@@ -253,11 +259,11 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
           </TabsList>
 
           <TabsContent value="citizens" className="space-y-4">
-            <CitizensTab user={user} />
+            <CitizensTab user={user} citizenIdToOpen={citizenIdToOpen} onCitizenOpened={() => setCitizenIdToOpen(null)} />
           </TabsContent>
 
           <TabsContent value="vehicles" className="space-y-4">
-            <VehiclesTab user={user} />
+            <VehiclesTab user={user} onOpenCitizen={handleOpenCitizen} />
           </TabsContent>
 
           <TabsContent value="patrol" className="space-y-4">

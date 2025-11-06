@@ -15,7 +15,12 @@ interface User {
   role: string;
 }
 
-const VehiclesTab = ({ user }: { user: User }) => {
+interface VehiclesTabProps {
+  user: User;
+  onOpenCitizen?: (citizenId: number) => void;
+}
+
+const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
@@ -202,7 +207,11 @@ const VehiclesTab = ({ user }: { user: User }) => {
                 </TableHeader>
                 <TableBody>
                   {searchResults.map((vehicle) => (
-                    <TableRow key={vehicle.id}>
+                    <TableRow 
+                      key={vehicle.id}
+                      onClick={() => fetchVehicleDetails(vehicle.id)}
+                      className="cursor-pointer hover:bg-blue-50 transition-colors"
+                    >
                       <TableCell className="font-mono font-bold">{vehicle.plate_number}</TableCell>
                       <TableCell className="font-mono">{vehicle.make} {vehicle.model}</TableCell>
                       <TableCell className="font-mono">{vehicle.color}</TableCell>
@@ -215,7 +224,7 @@ const VehiclesTab = ({ user }: { user: User }) => {
                           <Badge variant="destructive" className="font-mono">ВЛАДЕЛЕЦ В РОЗЫСКЕ</Badge>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="outline"
                           size="sm"
@@ -317,16 +326,24 @@ const VehiclesTab = ({ user }: { user: User }) => {
       </Dialog>
 
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-7xl h-[95vh] overflow-y-auto">
           {selectedVehicle && (
             <>
-              <DialogHeader>
-                <DialogTitle className="font-mono flex items-center gap-2">
+              <DialogHeader className="relative pb-6 border-b">
+                <DialogTitle className="font-mono flex items-center gap-2 text-2xl font-bold">
                   ТС #{selectedVehicle.id} - {selectedVehicle.plate_number}
                   {selectedVehicle.owner?.wanted_count > 0 && (
                     <Badge variant="destructive" className="font-mono">ВЛАДЕЛЕЦ В РОЗЫСКЕ</Badge>
                   )}
                 </DialogTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0"
+                  onClick={() => setIsDetailsDialogOpen(false)}
+                >
+                  <Icon name="X" className="h-4 w-4" />
+                </Button>
               </DialogHeader>
 
               <div className="space-y-6">
@@ -362,10 +379,14 @@ const VehiclesTab = ({ user }: { user: User }) => {
 
                 {selectedVehicle.owner && (
                   <Card className="border-2">
-                    <CardHeader>
-                      <CardTitle className="font-mono text-sm">ВЛАДЕЛЕЦ</CardTitle>
+                    <CardHeader className="bg-blue-50">
+                      <CardTitle className="font-mono text-sm flex items-center gap-2">
+                        <Icon name="User" className="w-4 h-4" />
+                        ВЛАДЕЛЕЦ
+                      </CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-4">
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="font-mono text-xs text-muted-foreground">ФИО</Label>
                         <p className="font-mono">
@@ -386,6 +407,17 @@ const VehiclesTab = ({ user }: { user: User }) => {
                             ВЛАДЕЛЕЦ НАХОДИТСЯ В РОЗЫСКЕ
                           </Badge>
                         </div>
+                      )}
+                      </div>
+                      {onOpenCitizen && selectedVehicle?.citizen_id && (
+                        <Button
+                          onClick={() => onOpenCitizen(selectedVehicle.citizen_id)}
+                          className="w-full font-mono"
+                          variant="outline"
+                        >
+                          <Icon name="UserCheck" className="w-4 h-4 mr-2" />
+                          Открыть профиль
+                        </Button>
                       )}
                     </CardContent>
                   </Card>
