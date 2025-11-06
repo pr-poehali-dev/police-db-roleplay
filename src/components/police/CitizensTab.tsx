@@ -76,10 +76,8 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
   }, [citizenIdToOpen, onCitizenOpened]);
 
   useEffect(() => {
-    if (canModify) {
-      fetchAllCitizens();
-    }
-  }, [canModify]);
+    // Убрана автозагрузка для снижения нагрузки на БД
+  }, []);
 
   const fetchAllCitizens = async () => {
     if (!canModify) return;
@@ -460,10 +458,21 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
               {isSearching ? 'ПОИСК...' : 'НАЙТИ'}
             </Button>
             {canModify && (
-              <Button onClick={() => setIsAddCitizenOpen(true)} className="font-mono w-full md:w-auto">
-                <Icon name="Plus" className="w-4 h-4 mr-2" />
-                ДОБАВИТЬ
-              </Button>
+              <>
+                <Button 
+                  onClick={fetchAllCitizens} 
+                  disabled={isLoadingAll} 
+                  variant="outline"
+                  className="font-mono w-full md:w-auto"
+                >
+                  <Icon name="RefreshCw" className={`w-4 h-4 mr-2 ${isLoadingAll ? 'animate-spin' : ''}`} />
+                  {isLoadingAll ? 'ЗАГРУЗКА...' : 'ЗАГРУЗИТЬ ВСЕ'}
+                </Button>
+                <Button onClick={() => setIsAddCitizenOpen(true)} className="font-mono w-full md:w-auto">
+                  <Icon name="Plus" className="w-4 h-4 mr-2" />
+                  ДОБАВИТЬ
+                </Button>
+              </>
             )}
           </div>
 

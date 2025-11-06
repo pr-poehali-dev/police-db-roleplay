@@ -269,14 +269,25 @@ const PatrolTab = ({ user }: { user: User }) => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="font-mono text-lg">ПАТРУЛЬНЫЕ ЭКИПАЖИ</CardTitle>
-            {canModify && (
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="font-mono">
-                    <Icon name="Plus" className="w-4 h-4 mr-2" />
-                    СОЗДАТЬ ЭКИПАЖ
-                  </Button>
-                </DialogTrigger>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={fetchPatrols}
+                disabled={isLoading}
+                className="font-mono"
+              >
+                <Icon name="RefreshCw" className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'ЗАГРУЗКА...' : 'ОБНОВИТЬ'}
+              </Button>
+              {canModify && (
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="font-mono">
+                      <Icon name="Plus" className="w-4 h-4 mr-2" />
+                      СОЗДАТЬ ЭКИПАЖ
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle className="font-mono">СОЗДАТЬ ПАТРУЛЬНЫЙ ЭКИПАЖ</DialogTitle>
@@ -369,7 +380,8 @@ const PatrolTab = ({ user }: { user: User }) => {
                   </Button>
                 </DialogContent>
               </Dialog>
-            )}
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>

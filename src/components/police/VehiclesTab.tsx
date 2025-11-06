@@ -44,10 +44,8 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
   const canModify = user.role === 'admin' || user.role === 'moderator';
 
   useEffect(() => {
-    if (canModify) {
-      fetchAllVehicles();
-    }
-  }, [canModify]);
+    // Убрана автозагрузка для снижения нагрузки на БД
+  }, []);
 
   const fetchAllVehicles = async () => {
     if (!canModify) return;
@@ -240,10 +238,21 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
               {isSearching ? 'ПОИСК...' : 'НАЙТИ'}
             </Button>
             {canModify && (
-              <Button onClick={() => setIsAddDialogOpen(true)} className="font-mono w-full md:w-auto">
-                <Icon name="Plus" className="w-4 h-4 mr-2" />
-                ДОБАВИТЬ
-              </Button>
+              <>
+                <Button 
+                  onClick={fetchAllVehicles} 
+                  disabled={isLoadingAll}
+                  variant="outline"
+                  className="font-mono w-full md:w-auto"
+                >
+                  <Icon name="RefreshCw" className={`w-4 h-4 mr-2 ${isLoadingAll ? 'animate-spin' : ''}`} />
+                  {isLoadingAll ? 'ЗАГРУЗКА...' : 'ЗАГРУЗИТЬ ВСЕ'}
+                </Button>
+                <Button onClick={() => setIsAddDialogOpen(true)} className="font-mono w-full md:w-auto">
+                  <Icon name="Plus" className="w-4 h-4 mr-2" />
+                  ДОБАВИТЬ
+                </Button>
+              </>
             )}
           </div>
 
