@@ -51,7 +51,7 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
             query: `
               SELECT 
                 (SELECT COUNT(DISTINCT citizen_id) FROM wanted_list WHERE is_active = true) as wanted_citizens,
-                (SELECT COUNT(*) FROM patrol_units WHERE is_active = true AND status != 'offline') as active_patrols,
+                (SELECT COUNT(*) FROM patrol_units WHERE is_active = true AND status != 'unavailable') as active_patrols,
                 (SELECT COUNT(*) FROM fines WHERE is_active = true AND status = 'unpaid') as unpaid_fines
             `
           })

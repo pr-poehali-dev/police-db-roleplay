@@ -16,16 +16,18 @@ interface User {
 const STATUS_COLORS = {
   available: 'bg-green-500',
   busy: 'bg-yellow-500',
-  offline: 'bg-gray-500',
-  emergency: 'bg-red-500'
+  on_scene: 'bg-orange-500',
+  unavailable: 'bg-gray-500'
 };
 
 const STATUS_LABELS = {
   available: 'ДОСТУПЕН',
   busy: 'ЗАНЯТ',
-  offline: 'OFFLINE',
-  emergency: 'ЭКСТРЕННЫЙ'
+  on_scene: 'ЗАДЕРЖКА НА СИТУАЦИИ',
+  unavailable: 'НЕДОСТУПЕН'
 };
+
+const STATUSES_REQUIRING_REASON = ['busy', 'on_scene', 'unavailable'];
 
 const PatrolTab = ({ user }: { user: User }) => {
   const [patrols, setPatrols] = useState<any[]>([]);
@@ -38,7 +40,8 @@ const PatrolTab = ({ user }: { user: User }) => {
 
   const [newPatrol, setNewPatrol] = useState({
     unitName: '',
-    status: 'offline',
+    status: 'available',
+    statusReason: '',
     locationName: '',
     officer1: '',
     officer2: '',
@@ -47,12 +50,20 @@ const PatrolTab = ({ user }: { user: User }) => {
 
   const [editPatrol, setEditPatrol] = useState({
     unitName: '',
-    status: 'offline',
+    status: 'available',
+    statusReason: '',
     locationName: '',
     officer1: '',
     officer2: '',
     vehicleNumber: ''
   });
+
+  const [statusChangeDialogOpen, setStatusChangeDialogOpen] = useState(false);
+  const [statusChangeData, setStatusChangeData] = useState<{
+    patrolId: number;
+    newStatus: string;
+    reason: string;
+  } | null>(null);
 
   const canModify = user.role === 'admin' || user.role === 'moderator';
 
@@ -101,25 +112,31 @@ const PatrolTab = ({ user }: { user: User }) => {
   const handleAddPatrol = async () => {
     if (!canModify) return;
     
+    if (STATUSES_REQUIRING_REASON.includes(newPatrol.status) && !newPatrol.statusReason.trim()) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Укажите причину для данного статуса' });
+      return;
+    }
+    
     try {
       const officer1Value = newPatrol.officer1 ? parseInt(newPatrol.officer1) : 'NULL';
       const officer2Value = newPatrol.officer2 ? parseInt(newPatrol.officer2) : 'NULL';
       const loc = newPatrol.locationName.replace(/'/g, "''");
       const veh = newPatrol.vehicleNumber.replace(/'/g, "''");
       const unit = newPatrol.unitName.replace(/'/g, "''");
+      const reason = newPatrol.statusReason.replace(/'/g, "''");
       
       await fetch('https://api.poehali.dev/v0/sql-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `INSERT INTO patrol_units (unit_name, status, location_name, officer_1, officer_2, vehicle_number) 
-                  VALUES ('${unit}', '${newPatrol.status}', '${loc}', ${officer1Value}, ${officer2Value}, '${veh}')`
+          query: `INSERT INTO patrol_units (unit_name, status, status_reason, location_name, officer_1, officer_2, vehicle_number) 
+                  VALUES ('${unit}', '${newPatrol.status}', '${reason}', '${loc}', ${officer1Value}, ${officer2Value}, '${veh}')`
         })
       });
       
       toast({ title: 'Успешно', description: 'Патруль создан' });
       setIsAddDialogOpen(false);
-      setNewPatrol({ unitName: '', status: 'offline', locationName: '', officer1: '', officer2: '', vehicleNumber: '' });
+      setNewPatrol({ unitName: '', status: 'available', statusReason: '', locationName: '', officer1: '', officer2: '', vehicleNumber: '' });
       fetchPatrols();
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось создать патруль' });
@@ -129,12 +146,18 @@ const PatrolTab = ({ user }: { user: User }) => {
   const handleUpdatePatrol = async () => {
     if (!canModify || !editingPatrol) return;
     
+    if (STATUSES_REQUIRING_REASON.includes(editPatrol.status) && !editPatrol.statusReason.trim()) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Укажите причину для данного статуса' });
+      return;
+    }
+    
     try {
       const officer1Value = editPatrol.officer1 ? parseInt(editPatrol.officer1) : 'NULL';
       const officer2Value = editPatrol.officer2 ? parseInt(editPatrol.officer2) : 'NULL';
       const loc = editPatrol.locationName.replace(/'/g, "''");
       const veh = editPatrol.vehicleNumber.replace(/'/g, "''");
       const unit = editPatrol.unitName.replace(/'/g, "''");
+      const reason = editPatrol.statusReason.replace(/'/g, "''");
       
       await fetch('https://api.poehali.dev/v0/sql-query', {
         method: 'POST',
@@ -142,7 +165,8 @@ const PatrolTab = ({ user }: { user: User }) => {
         body: JSON.stringify({
           query: `UPDATE patrol_units 
                   SET unit_name = '${unit}', 
-                      status = '${editPatrol.status}', 
+                      status = '${editPatrol.status}',
+                      status_reason = '${reason}', 
                       location_name = '${loc}', 
                       officer_1 = ${officer1Value}, 
                       officer_2 = ${officer2Value}, 
@@ -166,6 +190,7 @@ const PatrolTab = ({ user }: { user: User }) => {
     setEditPatrol({
       unitName: patrol.unit_name,
       status: patrol.status,
+      statusReason: patrol.status_reason || '',
       locationName: patrol.location_name || '',
       officer1: patrol.officer_1?.toString() || '',
       officer2: patrol.officer_2?.toString() || '',
@@ -174,22 +199,41 @@ const PatrolTab = ({ user }: { user: User }) => {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateStatus = async (patrolId: number, newStatus: string) => {
+  const initiateStatusChange = (patrolId: number, newStatus: string) => {
     if (!canModify) return;
     
+    if (STATUSES_REQUIRING_REASON.includes(newStatus)) {
+      setStatusChangeData({ patrolId, newStatus, reason: '' });
+      setStatusChangeDialogOpen(true);
+    } else {
+      handleUpdateStatus(patrolId, newStatus, '');
+    }
+  };
+
+  const handleUpdateStatus = async (patrolId: number, newStatus: string, reason: string) => {
+    if (!canModify) return;
+    
+    if (STATUSES_REQUIRING_REASON.includes(newStatus) && !reason.trim()) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Укажите причину для данного статуса' });
+      return;
+    }
+    
     try {
+      const escapedReason = reason.replace(/'/g, "''");
       await fetch('https://api.poehali.dev/v0/sql-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `UPDATE patrol_units SET status = '${newStatus}', updated_at = CURRENT_TIMESTAMP WHERE id = ${patrolId}`
+          query: `UPDATE patrol_units SET status = '${newStatus}', status_reason = '${escapedReason}', updated_at = CURRENT_TIMESTAMP WHERE id = ${patrolId}`
         })
       });
       
       setPatrols(patrols.map(p => 
-        p.id === patrolId ? { ...p, status: newStatus, updated_at: new Date().toISOString() } : p
+        p.id === patrolId ? { ...p, status: newStatus, status_reason: reason, updated_at: new Date().toISOString() } : p
       ));
       toast({ title: 'Успешно', description: 'Статус обновлен' });
+      setStatusChangeDialogOpen(false);
+      setStatusChangeData(null);
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось обновить статус' });
     }
@@ -243,7 +287,7 @@ const PatrolTab = ({ user }: { user: User }) => {
                       <Input 
                         value={newPatrol.unitName}
                         onChange={(e) => setNewPatrol({ ...newPatrol, unitName: e.target.value })}
-                        placeholder="Альфа-1"
+                        placeholder="Lincoln-1"
                         className="font-mono"
                       />
                     </div>
@@ -252,7 +296,7 @@ const PatrolTab = ({ user }: { user: User }) => {
                       <Input 
                         value={newPatrol.vehicleNumber}
                         onChange={(e) => setNewPatrol({ ...newPatrol, vehicleNumber: e.target.value })}
-                        placeholder="A777AA777"
+                        placeholder="A1B2C3D"
                         className="font-mono"
                       />
                     </div>
@@ -261,7 +305,7 @@ const PatrolTab = ({ user }: { user: User }) => {
                       <Input 
                         value={newPatrol.locationName}
                         onChange={(e) => setNewPatrol({ ...newPatrol, locationName: e.target.value })}
-                        placeholder="Центральный район, ул. Ленина 45"
+                        placeholder="Линкольн, 1"
                         className="font-mono"
                       />
                     </div>
@@ -302,12 +346,23 @@ const PatrolTab = ({ user }: { user: User }) => {
                         onChange={(e) => setNewPatrol({ ...newPatrol, status: e.target.value })}
                         className="w-full border rounded-md px-3 py-2 font-mono text-sm"
                       >
-                        <option value="offline">OFFLINE</option>
                         <option value="available">ДОСТУПЕН</option>
                         <option value="busy">ЗАНЯТ</option>
-                        <option value="emergency">ЭКСТРЕННЫЙ</option>
+                        <option value="on_scene">ЗАДЕРЖКА НА СИТУАЦИИ</option>
+                        <option value="unavailable">НЕДОСТУПЕН</option>
                       </select>
                     </div>
+                    {STATUSES_REQUIRING_REASON.includes(newPatrol.status) && (
+                      <div className="space-y-2 col-span-2">
+                        <Label className="font-mono text-xs text-red-600">ПРИЧИНА (ОБЯЗАТЕЛЬНО)</Label>
+                        <Input 
+                          value={newPatrol.statusReason}
+                          onChange={(e) => setNewPatrol({ ...newPatrol, statusReason: e.target.value })}
+                          placeholder="Укажите причину статуса"
+                          className="font-mono border-red-300"
+                        />
+                      </div>
+                    )}
                   </div>
                   <Button onClick={handleAddPatrol} className="w-full font-mono">
                     СОЗДАТЬ
@@ -347,6 +402,15 @@ const PatrolTab = ({ user }: { user: User }) => {
                           </div>
                         </div>
                         
+                        {patrol.status_reason && STATUSES_REQUIRING_REASON.includes(patrol.status) && (
+                          <div className="flex items-start gap-2">
+                            <Icon name="Info" className="w-4 h-4 mt-0.5 text-orange-500" />
+                            <div>
+                              <p className="font-mono text-xs text-orange-700">{patrol.status_reason}</p>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="flex items-start gap-2">
                           <Icon name="Users" className="w-4 h-4 mt-0.5 text-muted-foreground" />
                           <div>
@@ -371,13 +435,13 @@ const PatrolTab = ({ user }: { user: User }) => {
                         <div className="flex gap-2 pt-2 border-t">
                           <select
                             value={patrol.status}
-                            onChange={(e) => handleUpdateStatus(patrol.id, e.target.value)}
+                            onChange={(e) => initiateStatusChange(patrol.id, e.target.value)}
                             className="flex-1 border rounded-md px-2 py-1 font-mono text-xs"
                           >
-                            <option value="offline">OFFLINE</option>
                             <option value="available">ДОСТУПЕН</option>
                             <option value="busy">ЗАНЯТ</option>
-                            <option value="emergency">ЭКСТРЕННЫЙ</option>
+                            <option value="on_scene">ЗАДЕРЖКА НА СИТУАЦИИ</option>
+                            <option value="unavailable">НЕДОСТУПЕН</option>
                           </select>
                           <Button 
                             size="sm" 
@@ -424,7 +488,7 @@ const PatrolTab = ({ user }: { user: User }) => {
                 <Input 
                   value={editPatrol.unitName}
                   onChange={(e) => setEditPatrol({ ...editPatrol, unitName: e.target.value })}
-                  placeholder="Альфа-1"
+                  placeholder="Lincoln-1"
                   className="font-mono"
                 />
               </div>
@@ -433,7 +497,7 @@ const PatrolTab = ({ user }: { user: User }) => {
                 <Input 
                   value={editPatrol.vehicleNumber}
                   onChange={(e) => setEditPatrol({ ...editPatrol, vehicleNumber: e.target.value })}
-                  placeholder="A777AA777"
+                  placeholder="A1B2C3D"
                   className="font-mono"
                 />
               </div>
@@ -442,7 +506,7 @@ const PatrolTab = ({ user }: { user: User }) => {
                 <Input 
                   value={editPatrol.locationName}
                   onChange={(e) => setEditPatrol({ ...editPatrol, locationName: e.target.value })}
-                  placeholder="Центральный район, ул. Ленина 45"
+                  placeholder="Линкольн, 1"
                   className="font-mono"
                 />
               </div>
@@ -483,17 +547,71 @@ const PatrolTab = ({ user }: { user: User }) => {
                   onChange={(e) => setEditPatrol({ ...editPatrol, status: e.target.value })}
                   className="w-full border rounded-md px-3 py-2 font-mono text-sm"
                 >
-                  <option value="offline">OFFLINE</option>
                   <option value="available">ДОСТУПЕН</option>
                   <option value="busy">ЗАНЯТ</option>
-                  <option value="emergency">ЭКСТРЕННЫЙ</option>
+                  <option value="on_scene">ЗАДЕРЖКА НА СИТУАЦИИ</option>
+                  <option value="unavailable">НЕДОСТУПЕН</option>
                 </select>
               </div>
+              {STATUSES_REQUIRING_REASON.includes(editPatrol.status) && (
+                <div className="space-y-2 col-span-2">
+                  <Label className="font-mono text-xs text-red-600">ПРИЧИНА (ОБЯЗАТЕЛЬНО)</Label>
+                  <Input 
+                    value={editPatrol.statusReason}
+                    onChange={(e) => setEditPatrol({ ...editPatrol, statusReason: e.target.value })}
+                    placeholder="Укажите причину статуса"
+                    className="font-mono border-red-300"
+                  />
+                </div>
+              )}
             </div>
           )}
           <Button onClick={handleUpdatePatrol} className="w-full font-mono">
             СОХРАНИТЬ
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={statusChangeDialogOpen} onOpenChange={setStatusChangeDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-mono">УКАЗАТЬ ПРИЧИНУ</DialogTitle>
+          </DialogHeader>
+          {statusChangeData && (
+            <div className="space-y-4">
+              <div>
+                <p className="font-mono text-sm text-muted-foreground mb-2">
+                  Новый статус: <span className="font-bold">{STATUS_LABELS[statusChangeData.newStatus as keyof typeof STATUS_LABELS]}</span>
+                </p>
+                <Label className="font-mono text-xs text-red-600">ПРИЧИНА (ОБЯЗАТЕЛЬНО)</Label>
+                <Input 
+                  value={statusChangeData.reason}
+                  onChange={(e) => setStatusChangeData({ ...statusChangeData, reason: e.target.value })}
+                  placeholder="Укажите причину статуса"
+                  className="font-mono border-red-300 mt-2"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setStatusChangeDialogOpen(false);
+                    setStatusChangeData(null);
+                  }}
+                  className="flex-1 font-mono"
+                >
+                  ОТМЕНА
+                </Button>
+                <Button 
+                  onClick={() => handleUpdateStatus(statusChangeData.patrolId, statusChangeData.newStatus, statusChangeData.reason)}
+                  className="flex-1 font-mono"
+                >
+                  СОХРАНИТЬ
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
