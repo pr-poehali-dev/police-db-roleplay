@@ -1,15 +1,50 @@
 // Временные mock-данные для работы без БД
 // ⚠️ ВНИМАНИЕ: Это временное решение. Включите БД, когда лимиты восстановятся
 
+export const MOCK_USERS = [
+  {
+    id: 1,
+    username: 'admin',
+    full_name: 'Главный Администратор',
+    badge_number: 'A-0001',
+    role: 'admin',
+    created_at: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: 2,
+    username: 'moderator1',
+    full_name: 'Иван Петров',
+    badge_number: 'M-1001',
+    role: 'moderator',
+    created_at: '2024-02-15T10:30:00Z'
+  },
+  {
+    id: 3,
+    username: 'officer1',
+    full_name: 'Сергей Волков',
+    badge_number: 'B-2001',
+    role: 'user',
+    created_at: '2024-03-20T14:00:00Z'
+  },
+  {
+    id: 4,
+    username: 'officer2',
+    full_name: 'Мария Соколова',
+    badge_number: 'B-2002',
+    role: 'user',
+    created_at: '2024-04-10T09:15:00Z'
+  }
+];
+
 export const MOCK_CITIZENS = [
   {
     id: 1,
+    citizen_id: 'ID-00001',
     first_name: 'Александр',
     last_name: 'Иванов',
     date_of_birth: '1985-05-15',
     address: 'ул. Ленина, д. 10, кв. 5',
     phone: '+7 900 123-45-67',
-    occupation: 'Инженер',
     notes: 'Законопослушный гражданин',
     wanted_count: 0,
     crimes_count: 0,
@@ -18,12 +53,12 @@ export const MOCK_CITIZENS = [
   },
   {
     id: 2,
+    citizen_id: 'ID-00002',
     first_name: 'Мария',
     last_name: 'Петрова',
     date_of_birth: '1992-08-20',
     address: 'пр. Победы, д. 25, кв. 12',
     phone: '+7 900 234-56-78',
-    occupation: 'Врач',
     notes: '',
     wanted_count: 0,
     crimes_count: 0,
@@ -32,12 +67,12 @@ export const MOCK_CITIZENS = [
   },
   {
     id: 3,
+    citizen_id: 'ID-00003',
     first_name: 'Дмитрий',
     last_name: 'Сидоров',
     date_of_birth: '1988-12-03',
     address: 'ул. Советская, д. 7',
     phone: '+7 900 345-67-89',
-    occupation: 'Бизнесмен',
     notes: 'Владелец сети магазинов',
     wanted_count: 0,
     crimes_count: 1,
@@ -46,12 +81,12 @@ export const MOCK_CITIZENS = [
   },
   {
     id: 4,
+    citizen_id: 'ID-00004',
     first_name: 'Игорь',
     last_name: 'Волков',
     date_of_birth: '1995-03-10',
     address: 'ул. Пушкина, д. 15, кв. 8',
     phone: '+7 900 456-78-90',
-    occupation: 'Безработный',
     notes: 'Неоднократно задерживался',
     wanted_count: 1,
     crimes_count: 2,
@@ -269,12 +304,12 @@ export const getMockVehicleDetails = (vehicleId: number) => {
     ...vehicle,
     owner: citizen ? {
       id: citizen.id,
+      citizen_id: citizen.citizen_id,
       first_name: citizen.first_name,
       last_name: citizen.last_name,
       date_of_birth: citizen.date_of_birth,
       address: citizen.address,
       phone: citizen.phone,
-      occupation: citizen.occupation,
       notes: citizen.notes,
       wanted_count: citizen.wanted_count
     } : null

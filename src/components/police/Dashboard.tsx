@@ -7,6 +7,7 @@ import Icon from '@/components/ui/icon';
 import CitizensTab from './CitizensTab';
 import PatrolTab from './PatrolTab';
 import VehiclesTab from './VehiclesTab';
+import AccountsTab from './AccountsTab';
 import { MOCK_STATS, MOCK_WANTED } from '@/utils/mockData';
 
 interface DashboardProps {
@@ -217,7 +218,7 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 h-auto md:h-12 bg-gradient-to-r from-slate-100 to-slate-200 border-2">
+          <TabsList className="grid w-full grid-cols-4 h-auto md:h-12 bg-gradient-to-r from-slate-100 to-slate-200 border-2">
             <TabsTrigger 
               value="citizens" 
               className="font-mono font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white py-3"
@@ -237,8 +238,17 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
               className="font-mono font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white py-3"
             >
               <Icon name="Radio" className="w-4 h-4 mr-1 md:mr-2" />
-              <span className="text-xs md:text-sm">ПАТРУЛИ</span>
+              <span className="text-xs md:text-sm">ЭКИПАЖИ</span>
             </TabsTrigger>
+            {user.role === 'admin' && (
+              <TabsTrigger 
+                value="accounts" 
+                className="font-mono font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white py-3"
+              >
+                <Icon name="UserCog" className="w-4 h-4 mr-1 md:mr-2" />
+                <span className="text-xs md:text-sm">АККАУНТЫ</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="citizens" className="space-y-4">
@@ -251,6 +261,10 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
 
           <TabsContent value="patrol" className="space-y-4">
             <PatrolTab user={user} />
+          </TabsContent>
+
+          <TabsContent value="accounts" className="space-y-4">
+            <AccountsTab currentUser={user} />
           </TabsContent>
         </Tabs>
       </main>

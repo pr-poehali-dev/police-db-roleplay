@@ -36,12 +36,12 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
   const { toast } = useToast();
 
   const [newCitizen, setNewCitizen] = useState({
+    citizenId: '',
     firstName: '',
     lastName: '',
     dateOfBirth: '',
     address: '',
     phone: '',
-    occupation: '',
     notes: ''
   });
 
@@ -141,20 +141,20 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       const ln = newCitizen.lastName.replace(/'/g, "''");
       const addr = newCitizen.address.replace(/'/g, "''");
       const phone = newCitizen.phone.replace(/'/g, "''");
-      const occ = newCitizen.occupation.replace(/'/g, "''");
+      const cid = newCitizen.citizenId.replace(/'/g, "''");
       const notes = newCitizen.notes.replace(/'/g, "''");
 
       await fetch('https://api.poehali.dev/v0/sql-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `INSERT INTO citizens (first_name, last_name, date_of_birth, address, phone, occupation, notes, created_by) VALUES ('${fn}', '${ln}', '${newCitizen.dateOfBirth}', '${addr}', '${phone}', '${occ}', '${notes}', ${user.id})`
+          query: `INSERT INTO citizens (citizen_id, first_name, last_name, date_of_birth, address, phone, notes, created_by) VALUES ('${cid}', '${fn}', '${ln}', '${newCitizen.dateOfBirth}', '${addr}', '${phone}', '${notes}', ${user.id})`
         })
       });
       
       toast({ title: 'Успешно', description: 'Гражданин добавлен' });
       setIsAddCitizenOpen(false);
-      setNewCitizen({ firstName: '', lastName: '', dateOfBirth: '', address: '', phone: '', occupation: '', notes: '' });
+      setNewCitizen({ citizenId: '', firstName: '', lastName: '', dateOfBirth: '', address: '', phone: '', notes: '' });
       fetchAllCitizens();
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось добавить гражданина' });
@@ -300,7 +300,7 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted">
-                    <TableHead className="font-mono text-xs">ID</TableHead>
+                    <TableHead className="font-mono text-xs">ID-КАРТА</TableHead>
                     <TableHead className="font-mono text-xs">ИМЯ</TableHead>
                     <TableHead className="font-mono text-xs hidden md:table-cell">ФАМИЛИЯ</TableHead>
                     <TableHead className="font-mono text-xs hidden lg:table-cell">ДАТА РОЖДЕНИЯ</TableHead>
@@ -319,7 +319,7 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                       onClick={() => fetchCitizenDetails(citizen.id)}
                       className="cursor-pointer hover:bg-blue-50 transition-colors"
                     >
-                      <TableCell className="font-mono text-xs">{citizen.id}</TableCell>
+                      <TableCell className="font-mono text-xs">{citizen.citizen_id}</TableCell>
                       <TableCell className="font-mono text-xs">{citizen.first_name}</TableCell>
                       <TableCell className="font-mono text-xs hidden md:table-cell">{citizen.last_name}</TableCell>
                       <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.date_of_birth}</TableCell>
@@ -354,7 +354,7 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted">
-                    <TableHead className="font-mono text-xs">ID</TableHead>
+                    <TableHead className="font-mono text-xs">ID-КАРТА</TableHead>
                     <TableHead className="font-mono text-xs">ИМЯ</TableHead>
                     <TableHead className="font-mono text-xs hidden md:table-cell">ФАМИЛИЯ</TableHead>
                     <TableHead className="font-mono text-xs hidden lg:table-cell">ДАТА РОЖДЕНИЯ</TableHead>
@@ -373,7 +373,7 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                       onClick={() => fetchCitizenDetails(citizen.id)}
                       className="cursor-pointer hover:bg-blue-50 transition-colors"
                     >
-                      <TableCell className="font-mono text-xs">{citizen.id}</TableCell>
+                      <TableCell className="font-mono text-xs">{citizen.citizen_id}</TableCell>
                       <TableCell className="font-mono text-xs">{citizen.first_name}</TableCell>
                       <TableCell className="font-mono text-xs hidden md:table-cell">{citizen.last_name}</TableCell>
                       <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.date_of_birth}</TableCell>
@@ -411,6 +411,15 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
             <DialogTitle className="font-mono">ДОБАВИТЬ ГРАЖДАНИНА</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <Label className="font-mono">ID-КАРТА</Label>
+              <Input
+                value={newCitizen.citizenId}
+                onChange={(e) => setNewCitizen({ ...newCitizen, citizenId: e.target.value })}
+                placeholder="ID-00001"
+                className="font-mono"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="font-mono">ИМЯ</Label>
@@ -451,14 +460,6 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
               <Input
                 value={newCitizen.phone}
                 onChange={(e) => setNewCitizen({ ...newCitizen, phone: e.target.value })}
-                className="font-mono"
-              />
-            </div>
-            <div>
-              <Label className="font-mono">ЗАНЯТОСТЬ</Label>
-              <Input
-                value={newCitizen.occupation}
-                onChange={(e) => setNewCitizen({ ...newCitizen, occupation: e.target.value })}
                 className="font-mono"
               />
             </div>
@@ -510,6 +511,10 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                 <TabsContent value="info" className="space-y-6 mt-6">
                   <div className="grid grid-cols-2 gap-6 p-6 bg-gray-50 rounded-lg">
                     <div>
+                      <Label className="font-mono text-xs text-muted-foreground">ID-КАРТА</Label>
+                      <p className="font-mono">{selectedCitizen.citizen_id}</p>
+                    </div>
+                    <div>
                       <Label className="font-mono text-xs text-muted-foreground">ДАТА РОЖДЕНИЯ</Label>
                       <p className="font-mono">{selectedCitizen.date_of_birth}</p>
                     </div>
@@ -520,10 +525,6 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                     <div className="col-span-2">
                       <Label className="font-mono text-xs text-muted-foreground">АДРЕС</Label>
                       <p className="font-mono">{selectedCitizen.address}</p>
-                    </div>
-                    <div>
-                      <Label className="font-mono text-xs text-muted-foreground">ЗАНЯТОСТЬ</Label>
-                      <p className="font-mono">{selectedCitizen.occupation}</p>
                     </div>
                     <div className="col-span-2">
                       <Label className="font-mono text-xs text-muted-foreground">ЗАМЕТКИ</Label>

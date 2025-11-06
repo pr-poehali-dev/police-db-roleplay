@@ -164,7 +164,7 @@ const PatrolTab = ({ user }: { user: User }) => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="font-mono text-lg">ПАТРУЛЬНЫЕ ЭКИПАЖИ</CardTitle>
+            <CardTitle className="font-mono text-lg">АКТИВНЫЕ ЭКИПАЖИ</CardTitle>
             <div className="flex gap-2">
               <Button 
                 size="sm" 
@@ -376,7 +376,7 @@ const PatrolTab = ({ user }: { user: User }) => {
               
               {!patrols.length && (
                 <div className="col-span-2 text-center py-12 font-mono text-muted-foreground">
-                  Нет активных патрулей
+                  Нет активных экипажей
                 </div>
               )}
             </div>
