@@ -7,6 +7,7 @@ import Icon from '@/components/ui/icon';
 import CitizensTab from './CitizensTab';
 import PatrolTab from './PatrolTab';
 import VehiclesTab from './VehiclesTab';
+import { MOCK_STATS, MOCK_WANTED } from '@/utils/mockData';
 
 interface DashboardProps {
   user: {
@@ -43,65 +44,35 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
   }, [activeTab]);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('https://api.poehali.dev/v0/sql-query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `
-              SELECT 
-                (SELECT COUNT(DISTINCT citizen_id) FROM wanted_list WHERE is_active = true) as wanted_citizens,
-                (SELECT COUNT(*) FROM patrol_units WHERE is_active = true AND status != 'unavailable') as active_patrols,
-                (SELECT COUNT(*) FROM fines WHERE is_active = true AND status = 'unpaid') as unpaid_fines
-            `
-          })
-        });
-
-        const data = await response.json();
-        const row = data.rows?.[0];
-
-        if (row) {
-          setStats({
-            wantedCitizens: row.wanted_citizens || 0,
-            activePatrols: row.active_patrols || 0,
-            unpaidFines: row.unpaid_fines || 0
-          });
-        }
-      } catch (error) {
-        console.error('Failed to fetch stats');
-      }
+    // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+    const fetchStats = () => {
+      setStats({
+        wantedCitizens: MOCK_STATS.wanted_citizens,
+        activePatrols: MOCK_STATS.active_patrols,
+        unpaidFines: MOCK_STATS.unpaid_fines
+      });
     };
 
-    const fetchWantedList = async () => {
-      try {
-        const response = await fetch('https://api.poehali.dev/v0/sql-query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `SELECT w.id, w.reason, w.added_at, c.id as citizen_id, c.first_name, c.last_name, c.date_of_birth
-                    FROM wanted_list w
-                    JOIN citizens c ON w.citizen_id = c.id
-                    WHERE w.is_active = true
-                    ORDER BY w.added_at DESC
-                    LIMIT 10`
-          })
-        });
-        const data = await response.json();
-        setWantedList(data.rows || []);
-      } catch (error) {
-        console.error('Failed to fetch wanted list');
-      }
+    const fetchWantedList = () => {
+      setWantedList(MOCK_WANTED);
     };
 
     fetchStats();
     fetchWantedList();
   }, []);
 
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     setIsRefreshing(true);
-    await Promise.all([fetchStats(), fetchWantedList()]);
-    setIsRefreshing(false);
+    // Mock обновление
+    setTimeout(() => {
+      setStats({
+        wantedCitizens: MOCK_STATS.wanted_citizens,
+        activePatrols: MOCK_STATS.active_patrols,
+        unpaidFines: MOCK_STATS.unpaid_fines
+      });
+      setWantedList(MOCK_WANTED);
+      setIsRefreshing(false);
+    }, 500);
   };
 
   return (
@@ -152,6 +123,19 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
       </header>
 
       <main className="container mx-auto px-4 py-6">
+        <div className="bg-gradient-to-r from-yellow-100 to-orange-100 border-2 border-orange-400 rounded-md p-4 mb-6 shadow-lg">
+          <div className="flex items-start gap-3">
+            <Icon name="AlertTriangle" className="w-6 h-6 text-orange-600 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="font-mono font-bold text-orange-900 text-sm md:text-base">⚠️ MOCK-РЕЖИМ: БАЗА ДАННЫХ ВРЕМЕННО ОТКЛЮЧЕНА</h3>
+              <p className="font-mono text-xs md:text-sm text-orange-800 mt-1">
+                Превышен лимит запросов к БД. Отображаются тестовые данные. 
+                Добавление/изменение записей недоступно до восстановления подключения.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-md p-4 shadow-sm">
             <div className="flex items-center gap-3">

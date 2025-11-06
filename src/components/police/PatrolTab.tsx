@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import { MOCK_PATROLS } from '@/utils/mockData';
 
 interface User {
   id: number;
@@ -67,122 +68,30 @@ const PatrolTab = ({ user }: { user: User }) => {
 
   const canModify = user.role === 'admin' || user.role === 'moderator';
 
-  const fetchPatrols = async () => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const fetchPatrols = () => {
     setIsLoading(true);
-    try {
-      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `SELECT pu.*, 
-                  u1.full_name as officer1_name, u1.badge_number as officer1_badge,
-                  u2.full_name as officer2_name, u2.badge_number as officer2_badge
-                  FROM patrol_units pu 
-                  LEFT JOIN users u1 ON pu.officer_1 = u1.id
-                  LEFT JOIN users u2 ON pu.officer_2 = u2.id
-                  WHERE pu.is_active = true 
-                  ORDER BY pu.id DESC`
-        })
-      });
-      const data = await response.json();
-      setPatrols(data.rows || []);
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось загрузить патрули' });
-    } finally {
+    setTimeout(() => {
+      setPatrols(MOCK_PATROLS);
       setIsLoading(false);
-    }
+    }, 300);
   };
 
-  const fetchOfficers = async () => {
-    try {
-      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `SELECT id, full_name, badge_number FROM users WHERE role IN ('user', 'moderator') ORDER BY full_name`
-        })
-      });
-      const data = await response.json();
-      setOfficers(data.rows || []);
-    } catch (error) {
-      console.error('Failed to fetch officers');
-    }
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const fetchOfficers = () => {
+    setOfficers([]);
   };
 
-  const handleAddPatrol = async () => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleAddPatrol = () => {
     if (!canModify) return;
-    
-    if (STATUSES_REQUIRING_REASON.includes(newPatrol.status) && !newPatrol.statusReason.trim()) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Укажите причину для данного статуса' });
-      return;
-    }
-    
-    try {
-      const officer1Value = newPatrol.officer1 ? parseInt(newPatrol.officer1) : 'NULL';
-      const officer2Value = newPatrol.officer2 ? parseInt(newPatrol.officer2) : 'NULL';
-      const loc = newPatrol.locationName.replace(/'/g, "''");
-      const veh = newPatrol.vehicleNumber.replace(/'/g, "''");
-      const unit = newPatrol.unitName.replace(/'/g, "''");
-      const reason = newPatrol.statusReason.replace(/'/g, "''");
-      
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `INSERT INTO patrol_units (unit_name, status, status_reason, location_name, officer_1, officer_2, vehicle_number) 
-                  VALUES ('${unit}', '${newPatrol.status}', '${reason}', '${loc}', ${officer1Value}, ${officer2Value}, '${veh}')`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'Патруль создан' });
-      setIsAddDialogOpen(false);
-      setNewPatrol({ unitName: '', status: 'available', statusReason: '', locationName: '', officer1: '', officer2: '', vehicleNumber: '' });
-      fetchPatrols();
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось создать патруль' });
-    }
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
-  const handleUpdatePatrol = async () => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleUpdatePatrol = () => {
     if (!canModify || !editingPatrol) return;
-    
-    if (STATUSES_REQUIRING_REASON.includes(editPatrol.status) && !editPatrol.statusReason.trim()) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Укажите причину для данного статуса' });
-      return;
-    }
-    
-    try {
-      const officer1Value = editPatrol.officer1 ? parseInt(editPatrol.officer1) : 'NULL';
-      const officer2Value = editPatrol.officer2 ? parseInt(editPatrol.officer2) : 'NULL';
-      const loc = editPatrol.locationName.replace(/'/g, "''");
-      const veh = editPatrol.vehicleNumber.replace(/'/g, "''");
-      const unit = editPatrol.unitName.replace(/'/g, "''");
-      const reason = editPatrol.statusReason.replace(/'/g, "''");
-      
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `UPDATE patrol_units 
-                  SET unit_name = '${unit}', 
-                      status = '${editPatrol.status}',
-                      status_reason = '${reason}', 
-                      location_name = '${loc}', 
-                      officer_1 = ${officer1Value}, 
-                      officer_2 = ${officer2Value}, 
-                      vehicle_number = '${veh}',
-                      updated_at = CURRENT_TIMESTAMP
-                  WHERE id = ${editingPatrol.id}`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'Патруль обновлен' });
-      setIsEditDialogOpen(false);
-      setEditingPatrol(null);
-      fetchPatrols();
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось обновить патруль' });
-    }
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
   const openEditDialog = (patrol: any) => {
@@ -239,23 +148,10 @@ const PatrolTab = ({ user }: { user: User }) => {
     }
   };
 
-  const handleDeletePatrol = async (patrolId: number) => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleDeletePatrol = (patrolId: number) => {
     if (!canModify) return;
-    
-    try {
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `UPDATE patrol_units SET is_active = false WHERE id = ${patrolId}`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'Патруль удален' });
-      fetchPatrols();
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить патруль' });
-    }
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
   useEffect(() => {

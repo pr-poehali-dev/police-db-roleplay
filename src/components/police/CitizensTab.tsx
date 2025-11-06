@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import { MOCK_CITIZENS, getMockCitizenDetails } from '@/utils/mockData';
 
 interface User {
   id: number;
@@ -79,131 +80,57 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
     // Убрана автозагрузка для снижения нагрузки на БД
   }, []);
 
-  const fetchAllCitizens = async () => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const fetchAllCitizens = () => {
     if (!canModify) return;
     
     setIsLoadingAll(true);
-    try {
-      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `SELECT c.*, 
-                  (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = c.id AND w.is_active = true) as wanted_count,
-                  (SELECT COUNT(*) FROM criminal_records cr WHERE cr.citizen_id = c.id AND cr.is_active = true) as crimes_count,
-                  (SELECT COUNT(*) FROM fines f WHERE f.citizen_id = c.id AND f.is_active = true) as fines_count,
-                  (SELECT COUNT(*) FROM warnings wr WHERE wr.citizen_id = c.id AND wr.is_active = true) as warnings_count
-                  FROM citizens c 
-                  WHERE c.is_active = true 
-                  ORDER BY c.id DESC LIMIT 100`
-        })
-      });
-      const data = await response.json();
-      setAllCitizens(data.rows || []);
-    } catch (error) {
-      console.error('Failed to fetch all citizens');
-    } finally {
+    setTimeout(() => {
+      setAllCitizens(MOCK_CITIZENS);
       setIsLoadingAll(false);
-    }
+    }, 300);
   };
 
-  const handleSearch = async () => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleSearch = () => {
     if (!searchTerm.trim()) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Введите данные для поиска' });
       return;
     }
 
     setIsSearching(true);
-    try {
-      const searchPattern = searchTerm.replace(/'/g, "''");
-      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `SELECT c.*, 
-                  (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = c.id AND w.is_active = true) as wanted_count,
-                  (SELECT COUNT(*) FROM criminal_records cr WHERE cr.citizen_id = c.id AND cr.is_active = true) as crimes_count,
-                  (SELECT COUNT(*) FROM fines f WHERE f.citizen_id = c.id AND f.is_active = true) as fines_count,
-                  (SELECT COUNT(*) FROM warnings wr WHERE wr.citizen_id = c.id AND wr.is_active = true) as warnings_count
-                  FROM citizens c 
-                  WHERE c.is_active = true 
-                  AND (LOWER(c.first_name) LIKE LOWER('%${searchPattern}%') 
-                       OR LOWER(c.last_name) LIKE LOWER('%${searchPattern}%')
-                       OR LOWER(c.phone) LIKE LOWER('%${searchPattern}%')
-                       OR c.id::text = '${searchPattern}')
-                  ORDER BY c.id DESC LIMIT 50`
-        })
-      });
-      const data = await response.json();
-      setSearchResults(data.rows || []);
+    setTimeout(() => {
+      const searchLower = searchTerm.toLowerCase();
+      const results = MOCK_CITIZENS.filter(c => 
+        c.first_name.toLowerCase().includes(searchLower) ||
+        c.last_name.toLowerCase().includes(searchLower) ||
+        c.phone.toLowerCase().includes(searchLower) ||
+        c.id.toString() === searchTerm
+      );
+      setSearchResults(results);
       
-      if (data.rows?.length === 0) {
+      if (results.length === 0) {
         toast({ title: 'Поиск', description: 'Ничего не найдено' });
       }
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Ошибка поиска' });
-    } finally {
       setIsSearching(false);
-    }
+    }, 300);
   };
 
-  const fetchCitizenDetails = async (citizenId: number) => {
-    try {
-      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `
-            WITH citizen_data AS (
-              SELECT * FROM citizens WHERE id = ${citizenId} AND is_active = true
-            ),
-            criminal_data AS (
-              SELECT * FROM criminal_records WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY date_committed DESC
-            ),
-            fines_data AS (
-              SELECT * FROM fines WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY issued_at DESC
-            ),
-            warnings_data AS (
-              SELECT * FROM warnings WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY issued_at DESC
-            ),
-            wanted_data AS (
-              SELECT * FROM wanted_list WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY added_at DESC
-            )
-            SELECT 
-              json_build_object(
-                'citizen', (SELECT json_agg(citizen_data.*) FROM citizen_data),
-                'criminal_records', (SELECT json_agg(criminal_data.*) FROM criminal_data),
-                'fines', (SELECT json_agg(fines_data.*) FROM fines_data),
-                'warnings', (SELECT json_agg(warnings_data.*) FROM warnings_data),
-                'wanted', (SELECT json_agg(wanted_data.*) FROM wanted_data)
-              ) as data
-          `
-        })
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const fetchCitizenDetails = (citizenId: number) => {
+    const data = getMockCitizenDetails(citizenId);
+    
+    if (!data) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Гражданин не найден', 
+        description: `Гражданин с ID ${citizenId} не найден в базе данных` 
       });
-
-      const result = await response.json();
-      const data = result.rows?.[0]?.data;
-
-      if (!data?.citizen || data.citizen.length === 0) {
-        toast({ 
-          variant: 'destructive', 
-          title: 'Гражданин не найден', 
-          description: `Гражданин с ID ${citizenId} не найден в базе данных` 
-        });
-        return;
-      }
-
-      setSelectedCitizen({
-        ...data.citizen[0],
-        criminalRecords: data.criminal_records || [],
-        fines: data.fines || [],
-        warnings: data.warnings || [],
-        wanted: data.wanted || []
-      });
-      setIsDetailsDialogOpen(true);
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось загрузить детали' });
+      return;
     }
+
+    setSelectedCitizen(data);
+    setIsDetailsDialogOpen(true);
   };
 
   const handleAddCitizen = async () => {
@@ -283,159 +210,48 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
     }
   };
 
-  const handleAddWarning = async () => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleAddWarning = () => {
     if (!canModify || !selectedCitizen) return;
-    
-    try {
-      const warning = newWarning.warningText.replace(/'/g, "''");
-
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `INSERT INTO warnings (citizen_id, warning_text, issued_by) VALUES (${selectedCitizen.id}, '${warning}', ${user.id})`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'Предупреждение добавлено' });
-      setNewWarning({ warningText: '' });
-      if (selectedCitizen) {
-        fetchCitizenDetails(selectedCitizen.id);
-      }
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось добавить предупреждение' });
-    }
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
 
 
-  const handleAddToWanted = async () => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleAddToWanted = () => {
     if (!canModify || !selectedCitizen || !wantedReason.trim()) return;
-    
-    try {
-      const reason = wantedReason.replace(/'/g, "''");
-
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `INSERT INTO wanted_list (citizen_id, reason, added_by) VALUES (${selectedCitizen.id}, '${reason}', ${user.id})`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'Объявлен в розыск' });
-      setWantedReason('');
-      if (selectedCitizen) {
-        fetchCitizenDetails(selectedCitizen.id);
-      }
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось объявить в розыск' });
-    }
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
-  const handleRemoveFromWanted = async (wantedId: number) => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleRemoveFromWanted = (wantedId: number) => {
     if (!canModify) return;
-    
-    try {
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `UPDATE wanted_list SET is_active = false WHERE id = ${wantedId}`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'Розыск снят' });
-      if (selectedCitizen) {
-        fetchCitizenDetails(selectedCitizen.id);
-      }
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось снять розыск' });
-    }
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
-  const handleDeleteCitizen = async (citizenId: number) => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleDeleteCitizen = (citizenId: number) => {
     if (!canModify) return;
-    
-    try {
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `UPDATE citizens SET is_active = false WHERE id = ${citizenId}`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'Гражданин удален' });
-      setIsDetailsDialogOpen(false);
-      setSearchResults(searchResults.filter(c => c.id !== citizenId));
-      setAllCitizens(allCitizens.filter(c => c.id !== citizenId));
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить гражданина' });
-    }
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
-  const handleDeleteRecord = async (recordId: number) => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleDeleteRecord = (recordId: number) => {
     if (!canModify) return;
-    
-    try {
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `UPDATE criminal_records SET is_active = false WHERE id = ${recordId}`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'Запись удалена' });
-      if (selectedCitizen) {
-        fetchCitizenDetails(selectedCitizen.id);
-      }
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить запись' });
-    }
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
-  const handleDeleteFine = async (fineId: number) => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleDeleteFine = (fineId: number) => {
     if (!canModify) return;
-    
-    try {
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `UPDATE fines SET is_active = false WHERE id = ${fineId}`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'Штраф удален' });
-      if (selectedCitizen) {
-        fetchCitizenDetails(selectedCitizen.id);
-      }
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить штраф' });
-    }
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
-  const handleDeleteWarning = async (warningId: number) => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleDeleteWarning = (warningId: number) => {
     if (!canModify) return;
-    
-    try {
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `UPDATE warnings SET is_active = false WHERE id = ${warningId}`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'Предупреждение удалено' });
-      if (selectedCitizen) {
-        fetchCitizenDetails(selectedCitizen.id);
-      }
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить предупреждение' });
-    }
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
   return (

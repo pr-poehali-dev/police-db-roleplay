@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import { MOCK_VEHICLES, getMockVehicleDetails } from '@/utils/mockData';
 
 interface User {
   id: number;
@@ -47,175 +48,69 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
     // Убрана автозагрузка для снижения нагрузки на БД
   }, []);
 
-  const fetchAllVehicles = async () => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const fetchAllVehicles = () => {
     if (!canModify) return;
     
     setIsLoadingAll(true);
-    try {
-      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `SELECT v.*, c.first_name, c.last_name, c.phone,
-                  (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = v.citizen_id AND w.is_active = true) as owner_wanted
-                  FROM vehicles v
-                  JOIN citizens c ON v.citizen_id = c.id
-                  WHERE v.is_active = true
-                  ORDER BY v.added_at DESC LIMIT 100`
-        })
-      });
-      const data = await response.json();
-      setAllVehicles(data.rows || []);
-    } catch (error) {
-      console.error('Failed to fetch all vehicles');
-    } finally {
+    setTimeout(() => {
+      setAllVehicles(MOCK_VEHICLES);
       setIsLoadingAll(false);
-    }
+    }, 300);
   };
 
-  const handleSearch = async () => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleSearch = () => {
     if (!searchTerm.trim()) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Введите данные для поиска' });
       return;
     }
 
     setIsSearching(true);
-    try {
-      const searchPattern = searchTerm.replace(/'/g, "''");
-      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `SELECT v.*, c.first_name, c.last_name, c.phone,
-                  (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = v.citizen_id AND w.is_active = true) as owner_wanted
-                  FROM vehicles v
-                  JOIN citizens c ON v.citizen_id = c.id
-                  WHERE v.is_active = true
-                  AND (LOWER(v.plate_number) LIKE LOWER('%${searchPattern}%')
-                       OR LOWER(v.make) LIKE LOWER('%${searchPattern}%')
-                       OR LOWER(v.model) LIKE LOWER('%${searchPattern}%')
-                       OR v.id::text = '${searchPattern}')
-                  ORDER BY v.added_at DESC LIMIT 50`
-        })
-      });
-      const data = await response.json();
-      setSearchResults(data.rows || []);
+    setTimeout(() => {
+      const searchLower = searchTerm.toLowerCase();
+      const results = MOCK_VEHICLES.filter(v => 
+        v.plate_number.toLowerCase().includes(searchLower) ||
+        v.make.toLowerCase().includes(searchLower) ||
+        v.model.toLowerCase().includes(searchLower) ||
+        v.id.toString() === searchTerm
+      );
+      setSearchResults(results);
       
-      if (data.rows?.length === 0) {
+      if (results.length === 0) {
         toast({ title: 'Поиск', description: 'Ничего не найдено' });
       }
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Ошибка поиска' });
-    } finally {
       setIsSearching(false);
-    }
+    }, 300);
   };
 
-  const fetchVehicleDetails = async (vehicleId: number) => {
-    try {
-      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `
-            SELECT 
-              v.*,
-              c.id as owner_id, c.first_name, c.last_name, c.date_of_birth, c.address, c.phone, c.occupation, c.notes as owner_notes,
-              (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = c.id AND w.is_active = true) as wanted_count
-            FROM vehicles v
-            JOIN citizens c ON v.citizen_id = c.id
-            WHERE v.id = ${vehicleId} AND v.is_active = true
-          `
-        })
-      });
-
-      const data = await response.json();
-
-      if (!data.rows || data.rows.length === 0) {
-        toast({ 
-          variant: 'destructive', 
-          title: 'Транспортное средство не найдено', 
-          description: `ТС с ID ${vehicleId} не найдено в базе данных` 
-        });
-        return;
-      }
-
-      const row = data.rows[0];
-      setSelectedVehicle({
-        id: row.id,
-        citizen_id: row.citizen_id,
-        plate_number: row.plate_number,
-        make: row.make,
-        model: row.model,
-        color: row.color,
-        year: row.year,
-        notes: row.notes,
-        added_at: row.added_at,
-        owner: {
-          id: row.owner_id,
-          first_name: row.first_name,
-          last_name: row.last_name,
-          date_of_birth: row.date_of_birth,
-          address: row.address,
-          phone: row.phone,
-          occupation: row.occupation,
-          notes: row.owner_notes,
-          wanted_count: row.wanted_count
-        }
-      });
-      setIsDetailsDialogOpen(true);
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось загрузить детали' });
-    }
-  };
-
-  const handleAddVehicle = async () => {
-    if (!canModify) return;
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const fetchVehicleDetails = (vehicleId: number) => {
+    const data = getMockVehicleDetails(vehicleId);
     
-    try {
-      const plate = newVehicle.plateNumber.replace(/'/g, "''");
-      const make = newVehicle.make.replace(/'/g, "''");
-      const model = newVehicle.model.replace(/'/g, "''");
-      const color = newVehicle.color.replace(/'/g, "''");
-      const notes = newVehicle.notes.replace(/'/g, "''");
-
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `INSERT INTO vehicles (citizen_id, plate_number, make, model, color, year, notes, added_by) 
-                  VALUES (${newVehicle.citizenId}, '${plate}', '${make}', '${model}', '${color}', ${newVehicle.year || 'NULL'}, '${notes}', ${user.id})`
-        })
+    if (!data) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Транспортное средство не найдено', 
+        description: `ТС с ID ${vehicleId} не найдено в базе данных` 
       });
-      
-      toast({ title: 'Успешно', description: 'ТС добавлено' });
-      setIsAddDialogOpen(false);
-      setNewVehicle({ citizenId: '', plateNumber: '', make: '', model: '', color: '', year: '', notes: '' });
-      fetchAllVehicles();
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось добавить ТС' });
+      return;
     }
+
+    setSelectedVehicle(data);
+    setIsDetailsDialogOpen(true);
   };
 
-  const handleDeleteVehicle = async (vehicleId: number) => {
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleAddVehicle = () => {
     if (!canModify) return;
-    
-    try {
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `UPDATE vehicles SET is_active = false WHERE id = ${vehicleId}`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'ТС удалено' });
-      setIsDetailsDialogOpen(false);
-      setSearchResults(searchResults.filter(v => v.id !== vehicleId));
-      setAllVehicles(allVehicles.filter(v => v.id !== vehicleId));
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить ТС' });
-    }
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
+  };
+
+  // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
+  const handleDeleteVehicle = (vehicleId: number) => {
+    if (!canModify) return;
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
   return (
