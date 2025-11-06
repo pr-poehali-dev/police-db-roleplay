@@ -180,7 +180,7 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
           <CardTitle className="font-mono text-lg">ПОИСК ТРАНСПОРТНЫХ СРЕДСТВ</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex flex-col md:flex-row gap-2">
             <Input
               placeholder="Гос. номер, марка, модель или ID..."
               value={searchTerm}
@@ -188,12 +188,12 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               className="font-mono flex-1"
             />
-            <Button onClick={handleSearch} disabled={isSearching} className="font-mono">
+            <Button onClick={handleSearch} disabled={isSearching} className="font-mono w-full md:w-auto">
               <Icon name="Search" className="w-4 h-4 mr-2" />
               {isSearching ? 'ПОИСК...' : 'НАЙТИ'}
             </Button>
             {canModify && (
-              <Button onClick={() => setIsAddDialogOpen(true)} className="font-mono">
+              <Button onClick={() => setIsAddDialogOpen(true)} className="font-mono w-full md:w-auto">
                 <Icon name="Plus" className="w-4 h-4 mr-2" />
                 ДОБАВИТЬ
               </Button>
@@ -201,17 +201,17 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
           </div>
 
           {searchResults.length > 0 && (
-            <div className="border-2 rounded-md">
+            <div className="border-2 rounded-md overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted">
-                    <TableHead className="font-mono">ГОС. НОМЕР</TableHead>
-                    <TableHead className="font-mono">МАРКА / МОДЕЛЬ</TableHead>
-                    <TableHead className="font-mono">ЦВЕТ</TableHead>
-                    <TableHead className="font-mono">ГОД</TableHead>
-                    <TableHead className="font-mono">ВЛАДЕЛЕЦ</TableHead>
-                    <TableHead className="font-mono">СТАТУС</TableHead>
-                    <TableHead className="font-mono">ДЕЙСТВИЯ</TableHead>
+                    <TableHead className="font-mono text-xs">ГОС. НОМЕР</TableHead>
+                    <TableHead className="font-mono text-xs hidden md:table-cell">МАРКА / МОДЕЛЬ</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ЦВЕТ</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ГОД</TableHead>
+                    <TableHead className="font-mono text-xs hidden sm:table-cell">ВЛАДЕЛЕЦ</TableHead>
+                    <TableHead className="font-mono text-xs">СТАТУС</TableHead>
+                    <TableHead className="font-mono text-xs">ДЕЙСТВИЯ</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -221,16 +221,16 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
                       onClick={() => fetchVehicleDetails(vehicle.id)}
                       className="cursor-pointer hover:bg-blue-50 transition-colors"
                     >
-                      <TableCell className="font-mono font-bold">{vehicle.plate_number}</TableCell>
-                      <TableCell className="font-mono">{vehicle.make} {vehicle.model}</TableCell>
-                      <TableCell className="font-mono">{vehicle.color}</TableCell>
-                      <TableCell className="font-mono">{vehicle.year}</TableCell>
-                      <TableCell className="font-mono">
+                      <TableCell className="font-mono font-bold text-xs">{vehicle.plate_number}</TableCell>
+                      <TableCell className="font-mono text-xs hidden md:table-cell">{vehicle.make} {vehicle.model}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{vehicle.color}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{vehicle.year}</TableCell>
+                      <TableCell className="font-mono text-xs hidden sm:table-cell">
                         {vehicle.first_name} {vehicle.last_name}
                       </TableCell>
                       <TableCell>
                         {vehicle.owner_wanted > 0 && (
-                          <Badge variant="destructive" className="font-mono">ВЛАДЕЛЕЦ В РОЗЫСКЕ</Badge>
+                          <Badge variant="destructive" className="font-mono text-xs">РОЗЫСК</Badge>
                         )}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
@@ -238,9 +238,9 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
                           variant="outline"
                           size="sm"
                           onClick={() => fetchVehicleDetails(vehicle.id)}
-                          className="font-mono"
+                          className="font-mono text-xs"
                         >
-                          ОТКРЫТЬ
+                          <Icon name="Eye" className="w-3 h-3" />
                         </Button>
                       </TableCell>
                     </TableRow>

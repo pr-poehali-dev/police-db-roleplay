@@ -119,13 +119,13 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b-2 border-border bg-gradient-to-r from-blue-950 to-slate-900">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-blue-500 rounded-sm flex items-center justify-center shadow-lg">
               <Icon name="Shield" className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-mono font-bold tracking-tight text-white">
+              <h1 className="text-lg md:text-xl font-mono font-bold tracking-tight text-white">
                 ПОЛИЦЕЙСКАЯ БД
               </h1>
               <p className="text-xs text-blue-200 font-mono">
@@ -133,9 +133,9 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-mono font-medium text-white">{user.fullName}</p>
+          <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
+            <div className="text-right flex-1 md:flex-none">
+              <p className="text-xs md:text-sm font-mono font-medium text-white">{user.fullName}</p>
               <p className="text-xs text-blue-200 font-mono">
                 {user.badgeNumber} | {user.role.toUpperCase()}
               </p>
@@ -144,9 +144,9 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
               variant="destructive" 
               size="sm"
               onClick={onLogout}
-              className="font-mono"
+              className="font-mono text-xs md:text-sm"
             >
-              <Icon name="LogOut" className="w-4 h-4 mr-2" />
+              <Icon name="LogOut" className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
               ВЫХОД
             </Button>
           </div>
@@ -154,7 +154,7 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-md p-4 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-green-500 rounded-sm flex items-center justify-center shadow-md">
@@ -205,15 +205,15 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
                 {wantedList.map((wanted) => (
                   <div
                     key={wanted.id}
-                    className="bg-white border-2 border-red-200 rounded-md p-3 flex items-center justify-between hover:bg-red-50 transition-colors cursor-pointer"
+                    className="bg-white border-2 border-red-200 rounded-md p-3 flex flex-col md:flex-row items-start md:items-center justify-between hover:bg-red-50 transition-colors cursor-pointer gap-3"
                     onClick={() => handleOpenCitizen(wanted.citizen_id)}
                   >
-                    <div className="flex items-center gap-3 flex-1">
-                      <Badge variant="destructive" className="font-mono font-bold">
+                    <div className="flex items-center gap-3 flex-1 w-full">
+                      <Badge variant="destructive" className="font-mono font-bold text-xs">
                         РОЗЫСК
                       </Badge>
-                      <div>
-                        <p className="font-mono font-bold text-sm">
+                      <div className="flex-1">
+                        <p className="font-mono font-bold text-xs md:text-sm">
                           {wanted.first_name} {wanted.last_name}
                         </p>
                         <p className="font-mono text-xs text-muted-foreground">
@@ -221,8 +221,8 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
                         </p>
                       </div>
                     </div>
-                    <div className="flex-1 px-4">
-                      <p className="font-mono text-sm text-red-800">{wanted.reason}</p>
+                    <div className="flex-1 w-full md:px-4">
+                      <p className="font-mono text-xs md:text-sm text-red-800">{wanted.reason}</p>
                       <p className="font-mono text-xs text-muted-foreground">
                         {new Date(wanted.added_at).toLocaleString('ru-RU')}
                       </p>
@@ -235,27 +235,27 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 h-12 bg-gradient-to-r from-slate-100 to-slate-200 border-2">
+          <TabsList className="grid w-full grid-cols-3 h-auto md:h-12 bg-gradient-to-r from-slate-100 to-slate-200 border-2">
             <TabsTrigger 
               value="citizens" 
-              className="font-mono font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+              className="font-mono font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white py-3"
             >
-              <Icon name="Users" className="w-4 h-4 mr-2" />
-              ГРАЖДАНЕ
+              <Icon name="Users" className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="text-xs md:text-sm">ГРАЖДАНЕ</span>
             </TabsTrigger>
             <TabsTrigger 
               value="vehicles" 
-              className="font-mono font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+              className="font-mono font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white py-3"
             >
-              <Icon name="Car" className="w-4 h-4 mr-2" />
-              ТРАНСПОРТ
+              <Icon name="Car" className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="text-xs md:text-sm">ТРАНСПОРТ</span>
             </TabsTrigger>
             <TabsTrigger 
               value="patrol" 
-              className="font-mono font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+              className="font-mono font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white py-3"
             >
-              <Icon name="Radio" className="w-4 h-4 mr-2" />
-              ПАТРУЛИ
+              <Icon name="Radio" className="w-4 h-4 mr-1 md:mr-2" />
+              <span className="text-xs md:text-sm">ПАТРУЛИ</span>
             </TabsTrigger>
           </TabsList>
 

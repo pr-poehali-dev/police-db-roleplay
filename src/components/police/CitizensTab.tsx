@@ -325,7 +325,7 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
           <CardTitle className="font-mono text-lg">ПОИСК ГРАЖДАН</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex flex-col md:flex-row gap-2">
             <Input
               placeholder="ФИО, телефон или ID..."
               value={searchTerm}
@@ -333,12 +333,12 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               className="font-mono flex-1"
             />
-            <Button onClick={handleSearch} disabled={isSearching} className="font-mono">
+            <Button onClick={handleSearch} disabled={isSearching} className="font-mono w-full md:w-auto">
               <Icon name="Search" className="w-4 h-4 mr-2" />
               {isSearching ? 'ПОИСК...' : 'НАЙТИ'}
             </Button>
             {canModify && (
-              <Button onClick={() => setIsAddCitizenOpen(true)} className="font-mono">
+              <Button onClick={() => setIsAddCitizenOpen(true)} className="font-mono w-full md:w-auto">
                 <Icon name="Plus" className="w-4 h-4 mr-2" />
                 ДОБАВИТЬ
               </Button>
@@ -346,17 +346,17 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
           </div>
 
           {searchResults.length > 0 && (
-            <div className="border-2 rounded-md">
+            <div className="border-2 rounded-md overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted">
-                    <TableHead className="font-mono">ID</TableHead>
-                    <TableHead className="font-mono">ИМЯ</TableHead>
-                    <TableHead className="font-mono">ФАМИЛИЯ</TableHead>
-                    <TableHead className="font-mono">ДАТА РОЖДЕНИЯ</TableHead>
-                    <TableHead className="font-mono">ТЕЛЕФОН</TableHead>
-                    <TableHead className="font-mono">СТАТУС</TableHead>
-                    <TableHead className="font-mono">ДЕЙСТВИЯ</TableHead>
+                    <TableHead className="font-mono text-xs">ID</TableHead>
+                    <TableHead className="font-mono text-xs">ИМЯ</TableHead>
+                    <TableHead className="font-mono text-xs hidden md:table-cell">ФАМИЛИЯ</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ДАТА РОЖДЕНИЯ</TableHead>
+                    <TableHead className="font-mono text-xs hidden sm:table-cell">ТЕЛЕФОН</TableHead>
+                    <TableHead className="font-mono text-xs">СТАТУС</TableHead>
+                    <TableHead className="font-mono text-xs">ДЕЙСТВИЯ</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -366,14 +366,14 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                       onClick={() => fetchCitizenDetails(citizen.id)}
                       className="cursor-pointer hover:bg-blue-50 transition-colors"
                     >
-                      <TableCell className="font-mono">{citizen.id}</TableCell>
-                      <TableCell className="font-mono">{citizen.first_name}</TableCell>
-                      <TableCell className="font-mono">{citizen.last_name}</TableCell>
-                      <TableCell className="font-mono">{citizen.date_of_birth}</TableCell>
-                      <TableCell className="font-mono">{citizen.phone}</TableCell>
+                      <TableCell className="font-mono text-xs">{citizen.id}</TableCell>
+                      <TableCell className="font-mono text-xs">{citizen.first_name}</TableCell>
+                      <TableCell className="font-mono text-xs hidden md:table-cell">{citizen.last_name}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.date_of_birth}</TableCell>
+                      <TableCell className="font-mono text-xs hidden sm:table-cell">{citizen.phone}</TableCell>
                       <TableCell>
                         {citizen.wanted_count > 0 && (
-                          <Badge variant="destructive" className="font-mono">В РОЗЫСКЕ</Badge>
+                          <Badge variant="destructive" className="font-mono text-xs">РОЗЫСК</Badge>
                         )}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
@@ -381,9 +381,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                           variant="outline"
                           size="sm"
                           onClick={() => fetchCitizenDetails(citizen.id)}
-                          className="font-mono"
+                          className="font-mono text-xs"
                         >
-                          ОТКРЫТЬ
+                          <Icon name="Eye" className="w-3 h-3" />
                         </Button>
                       </TableCell>
                     </TableRow>
