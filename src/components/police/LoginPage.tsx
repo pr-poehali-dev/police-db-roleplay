@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,7 @@ interface LoginPageProps {
 const LoginPage = ({ onLogin }: LoginPageProps) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -24,7 +25,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `SELECT id, username, role, full_name, badge_number FROM users WHERE username = '${username}' AND password_hash = '${password}hash' LIMIT 1`
+          query: `SELECT id, username, role, full_name, badge_number, password_hash FROM users WHERE username = '${username}' LIMIT 1`
         })
       });
 
@@ -32,13 +33,29 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
       
       if (data.rows && data.rows.length > 0) {
         const user = data.rows[0];
-        onLogin({
-          id: user.id,
-          username: user.username,
-          role: user.role,
-          fullName: user.full_name,
-          badgeNumber: user.badge_number
-        });
+        const expectedHash = password + 'hash';
+        
+        if (user.password_hash === expectedHash) {
+          const userData = {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            fullName: user.full_name,
+            badgeNumber: user.badge_number
+          };
+          
+          const expiresAt = Date.now() + (rememberMe ? 30 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000);
+          const sessionData = { user: userData, expiresAt };
+          
+          localStorage.setItem('policeSession', JSON.stringify(sessionData));
+          onLogin(userData);
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Ошибка входа',
+            description: 'Неверное имя пользователя или пароль'
+          });
+        }
       } else {
         toast({
           variant: 'destructive',
@@ -96,6 +113,18 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
                 className="font-mono"
                 required
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-input"
+              />
+              <label htmlFor="rememberMe" className="text-sm font-mono font-medium cursor-pointer">
+                ЗАПОМНИТЬ МЕНЯ
+              </label>
             </div>
             <Button 
               type="submit" 

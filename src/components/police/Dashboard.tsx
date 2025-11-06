@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
@@ -17,7 +17,14 @@ interface DashboardProps {
 }
 
 const Dashboard = ({ user, onLogout }: DashboardProps) => {
-  const [activeTab, setActiveTab] = useState('citizens');
+  const [activeTab, setActiveTab] = useState(() => {
+    const savedTab = localStorage.getItem('policeActiveTab');
+    return savedTab || 'citizens';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('policeActiveTab', activeTab);
+  }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-background">
