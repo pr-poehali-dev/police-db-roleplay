@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "name": "Discord PING verification",
+      "method": "POST",
+      "body": {
+        "type": 1
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "type": 1
+      },
+      "bodyMatcher": "exact"
+    },
+    {
+      "name": "Unknown command returns error",
+      "method": "POST",
+      "body": {
+        "type": 2,
+        "data": {
+          "name": "unknown_command"
+        }
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "type": 4
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
