@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -73,7 +73,7 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       fetchCitizenDetails(citizenIdToOpen);
       onCitizenOpened?.();
     }
-  }, [citizenIdToOpen]);
+  }, [citizenIdToOpen, onCitizenOpened]);
 
   useEffect(() => {
     if (canModify) {
@@ -151,54 +151,42 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
 
   const fetchCitizenDetails = async (citizenId: number) => {
     try {
-      const [citizenRes, criminalRes, finesRes, warningsRes, wantedRes] = await Promise.all([
-        fetch('https://api.poehali.dev/v0/sql-query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `SELECT * FROM citizens WHERE id = ${citizenId} AND is_active = true`
-          })
-        }),
-        fetch('https://api.poehali.dev/v0/sql-query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `SELECT * FROM criminal_records WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY date_committed DESC`
-          })
-        }),
-        fetch('https://api.poehali.dev/v0/sql-query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `SELECT * FROM fines WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY issued_at DESC`
-          })
-        }),
-        fetch('https://api.poehali.dev/v0/sql-query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `SELECT * FROM warnings WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY issued_at DESC`
-          })
-        }),
-
-        fetch('https://api.poehali.dev/v0/sql-query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `SELECT * FROM wanted_list WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY added_at DESC`
-          })
+      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            WITH citizen_data AS (
+              SELECT * FROM citizens WHERE id = ${citizenId} AND is_active = true
+            ),
+            criminal_data AS (
+              SELECT * FROM criminal_records WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY date_committed DESC
+            ),
+            fines_data AS (
+              SELECT * FROM fines WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY issued_at DESC
+            ),
+            warnings_data AS (
+              SELECT * FROM warnings WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY issued_at DESC
+            ),
+            wanted_data AS (
+              SELECT * FROM wanted_list WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY added_at DESC
+            )
+            SELECT 
+              json_build_object(
+                'citizen', (SELECT json_agg(citizen_data.*) FROM citizen_data),
+                'criminal_records', (SELECT json_agg(criminal_data.*) FROM criminal_data),
+                'fines', (SELECT json_agg(fines_data.*) FROM fines_data),
+                'warnings', (SELECT json_agg(warnings_data.*) FROM warnings_data),
+                'wanted', (SELECT json_agg(wanted_data.*) FROM wanted_data)
+              ) as data
+          `
         })
-      ]);
+      });
 
-      const [citizenData, criminalData, finesData, warningsData, wantedData] = await Promise.all([
-        citizenRes.json(),
-        criminalRes.json(),
-        finesRes.json(),
-        warningsRes.json(),
-        wantedRes.json()
-      ]);
+      const result = await response.json();
+      const data = result.rows?.[0]?.data;
 
-      if (!citizenData.rows || citizenData.rows.length === 0) {
+      if (!data?.citizen || data.citizen.length === 0) {
         toast({ 
           variant: 'destructive', 
           title: 'Гражданин не найден', 
@@ -208,11 +196,11 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       }
 
       setSelectedCitizen({
-        ...(citizenData.rows?.[0] || {}),
-        criminalRecords: criminalData.rows || [],
-        fines: finesData.rows || [],
-        warnings: warningsData.rows || [],
-        wanted: wantedData.rows || []
+        ...data.citizen[0],
+        criminalRecords: data.criminal_records || [],
+        fines: data.fines || [],
+        warnings: data.warnings || [],
+        wanted: data.wanted || []
       });
       setIsDetailsDialogOpen(true);
     } catch (error) {
@@ -265,7 +253,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       
       toast({ title: 'Успешно', description: 'Запись добавлена' });
       setNewRecord({ crimeType: '', description: '', dateCommitted: '', severity: 'minor', status: 'active' });
-      fetchCitizenDetails(selectedCitizen.id);
+      if (selectedCitizen) {
+        fetchCitizenDetails(selectedCitizen.id);
+      }
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось добавить запись' });
     }
@@ -287,7 +277,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       
       toast({ title: 'Успешно', description: 'Штраф добавлен' });
       setNewFine({ amount: '', reason: '', status: 'unpaid' });
-      fetchCitizenDetails(selectedCitizen.id);
+      if (selectedCitizen) {
+        fetchCitizenDetails(selectedCitizen.id);
+      }
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось добавить штраф' });
     }
@@ -309,7 +301,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       
       toast({ title: 'Успешно', description: 'Предупреждение добавлено' });
       setNewWarning({ warningText: '' });
-      fetchCitizenDetails(selectedCitizen.id);
+      if (selectedCitizen) {
+        fetchCitizenDetails(selectedCitizen.id);
+      }
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось добавить предупреждение' });
     }
@@ -333,7 +327,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       
       toast({ title: 'Успешно', description: 'Объявлен в розыск' });
       setWantedReason('');
-      fetchCitizenDetails(selectedCitizen.id);
+      if (selectedCitizen) {
+        fetchCitizenDetails(selectedCitizen.id);
+      }
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось объявить в розыск' });
     }
@@ -352,7 +348,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       });
       
       toast({ title: 'Успешно', description: 'Розыск снят' });
-      fetchCitizenDetails(selectedCitizen.id);
+      if (selectedCitizen) {
+        fetchCitizenDetails(selectedCitizen.id);
+      }
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось снять розыск' });
     }
@@ -392,7 +390,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       });
       
       toast({ title: 'Успешно', description: 'Запись удалена' });
-      fetchCitizenDetails(selectedCitizen.id);
+      if (selectedCitizen) {
+        fetchCitizenDetails(selectedCitizen.id);
+      }
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить запись' });
     }
@@ -411,7 +411,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       });
       
       toast({ title: 'Успешно', description: 'Штраф удален' });
-      fetchCitizenDetails(selectedCitizen.id);
+      if (selectedCitizen) {
+        fetchCitizenDetails(selectedCitizen.id);
+      }
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить штраф' });
     }
@@ -430,7 +432,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       });
       
       toast({ title: 'Успешно', description: 'Предупреждение удалено' });
-      fetchCitizenDetails(selectedCitizen.id);
+      if (selectedCitizen) {
+        fetchCitizenDetails(selectedCitizen.id);
+      }
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить предупреждение' });
     }

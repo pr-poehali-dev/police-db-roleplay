@@ -44,41 +44,29 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [wantedRes, patrolsRes, finesRes] = await Promise.all([
-          fetch('https://api.poehali.dev/v0/sql-query', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              query: `SELECT COUNT(DISTINCT citizen_id) as count FROM wanted_list WHERE is_active = true`
-            })
-          }),
-          fetch('https://api.poehali.dev/v0/sql-query', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              query: `SELECT COUNT(*) as count FROM patrol_units WHERE is_active = true AND status != 'offline'`
-            })
-          }),
-          fetch('https://api.poehali.dev/v0/sql-query', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              query: `SELECT COUNT(*) as count FROM fines WHERE is_active = true AND status = 'unpaid'`
-            })
+        const response = await fetch('https://api.poehali.dev/v0/sql-query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: `
+              SELECT 
+                (SELECT COUNT(DISTINCT citizen_id) FROM wanted_list WHERE is_active = true) as wanted_citizens,
+                (SELECT COUNT(*) FROM patrol_units WHERE is_active = true AND status != 'offline') as active_patrols,
+                (SELECT COUNT(*) FROM fines WHERE is_active = true AND status = 'unpaid') as unpaid_fines
+            `
           })
-        ]);
-
-        const [wantedData, patrolsData, finesData] = await Promise.all([
-          wantedRes.json(),
-          patrolsRes.json(),
-          finesRes.json()
-        ]);
-
-        setStats({
-          wantedCitizens: wantedData.rows?.[0]?.count || 0,
-          activePatrols: patrolsData.rows?.[0]?.count || 0,
-          unpaidFines: finesData.rows?.[0]?.count || 0
         });
+
+        const data = await response.json();
+        const row = data.rows?.[0];
+
+        if (row) {
+          setStats({
+            wantedCitizens: row.wanted_citizens || 0,
+            activePatrols: row.active_patrols || 0,
+            unpaidFines: row.unpaid_fines || 0
+          });
+        }
       } catch (error) {
         console.error('Failed to fetch stats');
       }

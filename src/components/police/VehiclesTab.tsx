@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -115,33 +115,25 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
 
   const fetchVehicleDetails = async (vehicleId: number) => {
     try {
-      const [vehicleRes, citizenRes] = await Promise.all([
-        fetch('https://api.poehali.dev/v0/sql-query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `SELECT * FROM vehicles WHERE id = ${vehicleId} AND is_active = true`
-          })
-        }),
-        fetch('https://api.poehali.dev/v0/sql-query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `SELECT c.*, 
-                    (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = c.id AND w.is_active = true) as wanted_count
-                    FROM vehicles v
-                    JOIN citizens c ON v.citizen_id = c.id
-                    WHERE v.id = ${vehicleId} AND v.is_active = true`
-          })
+      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            SELECT 
+              v.*,
+              c.id as owner_id, c.first_name, c.last_name, c.date_of_birth, c.address, c.phone, c.occupation, c.notes as owner_notes,
+              (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = c.id AND w.is_active = true) as wanted_count
+            FROM vehicles v
+            JOIN citizens c ON v.citizen_id = c.id
+            WHERE v.id = ${vehicleId} AND v.is_active = true
+          `
         })
-      ]);
+      });
 
-      const [vehicleData, citizenData] = await Promise.all([
-        vehicleRes.json(),
-        citizenRes.json()
-      ]);
+      const data = await response.json();
 
-      if (!vehicleData.rows || vehicleData.rows.length === 0) {
+      if (!data.rows || data.rows.length === 0) {
         toast({ 
           variant: 'destructive', 
           title: 'Транспортное средство не найдено', 
@@ -150,9 +142,28 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
         return;
       }
 
+      const row = data.rows[0];
       setSelectedVehicle({
-        ...(vehicleData.rows?.[0] || {}),
-        owner: citizenData.rows?.[0] || null
+        id: row.id,
+        citizen_id: row.citizen_id,
+        plate_number: row.plate_number,
+        make: row.make,
+        model: row.model,
+        color: row.color,
+        year: row.year,
+        notes: row.notes,
+        added_at: row.added_at,
+        owner: {
+          id: row.owner_id,
+          first_name: row.first_name,
+          last_name: row.last_name,
+          date_of_birth: row.date_of_birth,
+          address: row.address,
+          phone: row.phone,
+          occupation: row.occupation,
+          notes: row.owner_notes,
+          wanted_count: row.wanted_count
+        }
       });
       setIsDetailsDialogOpen(true);
     } catch (error) {
