@@ -31,15 +31,24 @@ const PatrolTab = ({ user }: { user: User }) => {
   const [patrols, setPatrols] = useState<any[]>([]);
   const [officers, setOfficers] = useState<any[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [editingPatrol, setEditingPatrol] = useState<any>(null);
   const { toast } = useToast();
 
   const [newPatrol, setNewPatrol] = useState({
     unitName: '',
     status: 'offline',
     locationName: '',
-    latitude: '',
-    longitude: '',
+    officer1: '',
+    officer2: '',
+    vehicleNumber: ''
+  });
+
+  const [editPatrol, setEditPatrol] = useState({
+    unitName: '',
+    status: 'offline',
+    locationName: '',
     officer1: '',
     officer2: '',
     vehicleNumber: ''
@@ -95,25 +104,74 @@ const PatrolTab = ({ user }: { user: User }) => {
     try {
       const officer1Value = newPatrol.officer1 ? parseInt(newPatrol.officer1) : 'NULL';
       const officer2Value = newPatrol.officer2 ? parseInt(newPatrol.officer2) : 'NULL';
-      const latValue = newPatrol.latitude ? parseFloat(newPatrol.latitude) : 'NULL';
-      const lonValue = newPatrol.longitude ? parseFloat(newPatrol.longitude) : 'NULL';
+      const loc = newPatrol.locationName.replace(/'/g, "''");
+      const veh = newPatrol.vehicleNumber.replace(/'/g, "''");
+      const unit = newPatrol.unitName.replace(/'/g, "''");
       
       await fetch('https://api.poehali.dev/v0/sql-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `INSERT INTO patrol_units (unit_name, status, location_name, latitude, longitude, officer_1, officer_2, vehicle_number) 
-                  VALUES ('${newPatrol.unitName}', '${newPatrol.status}', '${newPatrol.locationName}', ${latValue}, ${lonValue}, ${officer1Value}, ${officer2Value}, '${newPatrol.vehicleNumber}')`
+          query: `INSERT INTO patrol_units (unit_name, status, location_name, officer_1, officer_2, vehicle_number) 
+                  VALUES ('${unit}', '${newPatrol.status}', '${loc}', ${officer1Value}, ${officer2Value}, '${veh}')`
         })
       });
       
       toast({ title: 'Успешно', description: 'Патруль создан' });
       setIsAddDialogOpen(false);
-      setNewPatrol({ unitName: '', status: 'offline', locationName: '', latitude: '', longitude: '', officer1: '', officer2: '', vehicleNumber: '' });
+      setNewPatrol({ unitName: '', status: 'offline', locationName: '', officer1: '', officer2: '', vehicleNumber: '' });
       fetchPatrols();
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось создать патруль' });
     }
+  };
+
+  const handleUpdatePatrol = async () => {
+    if (!canModify || !editingPatrol) return;
+    
+    try {
+      const officer1Value = editPatrol.officer1 ? parseInt(editPatrol.officer1) : 'NULL';
+      const officer2Value = editPatrol.officer2 ? parseInt(editPatrol.officer2) : 'NULL';
+      const loc = editPatrol.locationName.replace(/'/g, "''");
+      const veh = editPatrol.vehicleNumber.replace(/'/g, "''");
+      const unit = editPatrol.unitName.replace(/'/g, "''");
+      
+      await fetch('https://api.poehali.dev/v0/sql-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `UPDATE patrol_units 
+                  SET unit_name = '${unit}', 
+                      status = '${editPatrol.status}', 
+                      location_name = '${loc}', 
+                      officer_1 = ${officer1Value}, 
+                      officer_2 = ${officer2Value}, 
+                      vehicle_number = '${veh}',
+                      updated_at = CURRENT_TIMESTAMP
+                  WHERE id = ${editingPatrol.id}`
+        })
+      });
+      
+      toast({ title: 'Успешно', description: 'Патруль обновлен' });
+      setIsEditDialogOpen(false);
+      setEditingPatrol(null);
+      fetchPatrols();
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось обновить патруль' });
+    }
+  };
+
+  const openEditDialog = (patrol: any) => {
+    setEditingPatrol(patrol);
+    setEditPatrol({
+      unitName: patrol.unit_name,
+      status: patrol.status,
+      locationName: patrol.location_name || '',
+      officer1: patrol.officer_1?.toString() || '',
+      officer2: patrol.officer_2?.toString() || '',
+      vehicleNumber: patrol.vehicle_number || ''
+    });
+    setIsEditDialogOpen(true);
   };
 
   const handleUpdateStatus = async (patrolId: number, newStatus: string) => {
@@ -197,33 +255,11 @@ const PatrolTab = ({ user }: { user: User }) => {
                       />
                     </div>
                     <div className="space-y-2 col-span-2">
-                      <Label className="font-mono text-xs">ЛОКАЦИЯ</Label>
+                      <Label className="font-mono text-xs">МЕСТОПОЛОЖЕНИЕ</Label>
                       <Input 
                         value={newPatrol.locationName}
                         onChange={(e) => setNewPatrol({ ...newPatrol, locationName: e.target.value })}
-                        placeholder="Центральный район"
-                        className="font-mono"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-mono text-xs">ШИРОТА</Label>
-                      <Input 
-                        type="number"
-                        step="0.000001"
-                        value={newPatrol.latitude}
-                        onChange={(e) => setNewPatrol({ ...newPatrol, latitude: e.target.value })}
-                        placeholder="55.751244"
-                        className="font-mono"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-mono text-xs">ДОЛГОТА</Label>
-                      <Input 
-                        type="number"
-                        step="0.000001"
-                        value={newPatrol.longitude}
-                        onChange={(e) => setNewPatrol({ ...newPatrol, longitude: e.target.value })}
-                        placeholder="37.618423"
+                        placeholder="Центральный район, ул. Ленина 45"
                         className="font-mono"
                       />
                     </div>
@@ -305,12 +341,7 @@ const PatrolTab = ({ user }: { user: User }) => {
                         <div className="flex items-start gap-2">
                           <Icon name="MapPin" className="w-4 h-4 mt-0.5 text-muted-foreground" />
                           <div>
-                            <p className="font-mono">{patrol.location_name}</p>
-                            {patrol.latitude && patrol.longitude && (
-                              <p className="font-mono text-xs text-muted-foreground">
-                                {patrol.latitude}, {patrol.longitude}
-                              </p>
-                            )}
+                            <p className="font-mono text-sm">{patrol.location_name || 'Не указано'}</p>
                           </div>
                         </div>
                         
@@ -348,6 +379,14 @@ const PatrolTab = ({ user }: { user: User }) => {
                           </select>
                           <Button 
                             size="sm" 
+                            variant="outline"
+                            onClick={() => openEditDialog(patrol)}
+                            className="font-mono"
+                          >
+                            <Icon name="Edit" className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
                             variant="destructive"
                             onClick={() => handleDeletePatrol(patrol.id)}
                             className="font-mono"
@@ -371,22 +410,90 @@ const PatrolTab = ({ user }: { user: User }) => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-mono text-lg">КАРТА ПАТРУЛЕЙ</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-muted rounded-md p-8 text-center">
-            <Icon name="Map" className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="font-mono text-sm text-muted-foreground">
-              Интеграция карты в разработке
-            </p>
-            <p className="font-mono text-xs text-muted-foreground mt-2">
-              Координаты патрулей: {patrols.filter(p => p.latitude && p.longitude).length} доступно
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-mono">РЕДАКТИРОВАТЬ ПАТРУЛЬНЫЙ ЭКИПАЖ</DialogTitle>
+          </DialogHeader>
+          {editingPatrol && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-mono text-xs">ПОЗЫВНОЙ</Label>
+                <Input 
+                  value={editPatrol.unitName}
+                  onChange={(e) => setEditPatrol({ ...editPatrol, unitName: e.target.value })}
+                  placeholder="Альфа-1"
+                  className="font-mono"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-mono text-xs">НОМЕР ТС</Label>
+                <Input 
+                  value={editPatrol.vehicleNumber}
+                  onChange={(e) => setEditPatrol({ ...editPatrol, vehicleNumber: e.target.value })}
+                  placeholder="A777AA777"
+                  className="font-mono"
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label className="font-mono text-xs">МЕСТОПОЛОЖЕНИЕ</Label>
+                <Input 
+                  value={editPatrol.locationName}
+                  onChange={(e) => setEditPatrol({ ...editPatrol, locationName: e.target.value })}
+                  placeholder="Центральный район, ул. Ленина 45"
+                  className="font-mono"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-mono text-xs">ОФИЦЕР 1</Label>
+                <select 
+                  value={editPatrol.officer1}
+                  onChange={(e) => setEditPatrol({ ...editPatrol, officer1: e.target.value })}
+                  className="w-full border rounded-md px-3 py-2 font-mono text-sm"
+                >
+                  <option value="">Не выбран</option>
+                  {officers.map(officer => (
+                    <option key={officer.id} value={officer.id}>
+                      {officer.full_name} ({officer.badge_number})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-mono text-xs">ОФИЦЕР 2</Label>
+                <select 
+                  value={editPatrol.officer2}
+                  onChange={(e) => setEditPatrol({ ...editPatrol, officer2: e.target.value })}
+                  className="w-full border rounded-md px-3 py-2 font-mono text-sm"
+                >
+                  <option value="">Не выбран</option>
+                  {officers.map(officer => (
+                    <option key={officer.id} value={officer.id}>
+                      {officer.full_name} ({officer.badge_number})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-mono text-xs">СТАТУС</Label>
+                <select 
+                  value={editPatrol.status}
+                  onChange={(e) => setEditPatrol({ ...editPatrol, status: e.target.value })}
+                  className="w-full border rounded-md px-3 py-2 font-mono text-sm"
+                >
+                  <option value="offline">OFFLINE</option>
+                  <option value="available">ДОСТУПЕН</option>
+                  <option value="busy">ЗАНЯТ</option>
+                  <option value="emergency">ЭКСТРЕННЫЙ</option>
+                </select>
+              </div>
+            </div>
+          )}
+          <Button onClick={handleUpdatePatrol} className="w-full font-mono">
+            СОХРАНИТЬ
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

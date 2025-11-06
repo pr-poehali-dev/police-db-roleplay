@@ -91,7 +91,10 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: `SELECT c.*, 
-                  (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = c.id AND w.is_active = true) as wanted_count
+                  (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = c.id AND w.is_active = true) as wanted_count,
+                  (SELECT COUNT(*) FROM criminal_records cr WHERE cr.citizen_id = c.id AND cr.is_active = true) as crimes_count,
+                  (SELECT COUNT(*) FROM fines f WHERE f.citizen_id = c.id AND f.is_active = true) as fines_count,
+                  (SELECT COUNT(*) FROM warnings wr WHERE wr.citizen_id = c.id AND wr.is_active = true) as warnings_count
                   FROM citizens c 
                   WHERE c.is_active = true 
                   ORDER BY c.id DESC LIMIT 100`
@@ -120,7 +123,10 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: `SELECT c.*, 
-                  (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = c.id AND w.is_active = true) as wanted_count
+                  (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = c.id AND w.is_active = true) as wanted_count,
+                  (SELECT COUNT(*) FROM criminal_records cr WHERE cr.citizen_id = c.id AND cr.is_active = true) as crimes_count,
+                  (SELECT COUNT(*) FROM fines f WHERE f.citizen_id = c.id AND f.is_active = true) as fines_count,
+                  (SELECT COUNT(*) FROM warnings wr WHERE wr.citizen_id = c.id AND wr.is_active = true) as warnings_count
                   FROM citizens c 
                   WHERE c.is_active = true 
                   AND (LOWER(c.first_name) LIKE LOWER('%${searchPattern}%') 
@@ -470,6 +476,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                     <TableHead className="font-mono text-xs hidden md:table-cell">ФАМИЛИЯ</TableHead>
                     <TableHead className="font-mono text-xs hidden lg:table-cell">ДАТА РОЖДЕНИЯ</TableHead>
                     <TableHead className="font-mono text-xs hidden sm:table-cell">ТЕЛЕФОН</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ПРЕСТ.</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ШТРАФЫ</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ПРЕДУПР.</TableHead>
                     <TableHead className="font-mono text-xs">СТАТУС</TableHead>
                     <TableHead className="font-mono text-xs">ДЕЙСТВИЯ</TableHead>
                   </TableRow>
@@ -486,6 +495,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                       <TableCell className="font-mono text-xs hidden md:table-cell">{citizen.last_name}</TableCell>
                       <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.date_of_birth}</TableCell>
                       <TableCell className="font-mono text-xs hidden sm:table-cell">{citizen.phone}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.crimes_count || 0}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.fines_count || 0}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.warnings_count || 0}</TableCell>
                       <TableCell>
                         {citizen.wanted_count > 0 && (
                           <Badge variant="destructive" className="font-mono text-xs">РОЗЫСК</Badge>
@@ -518,6 +530,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                     <TableHead className="font-mono text-xs hidden md:table-cell">ФАМИЛИЯ</TableHead>
                     <TableHead className="font-mono text-xs hidden lg:table-cell">ДАТА РОЖДЕНИЯ</TableHead>
                     <TableHead className="font-mono text-xs hidden sm:table-cell">ТЕЛЕФОН</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ПРЕСТ.</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ШТРАФЫ</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ПРЕДУПР.</TableHead>
                     <TableHead className="font-mono text-xs">СТАТУС</TableHead>
                     <TableHead className="font-mono text-xs">ДЕЙСТВИЯ</TableHead>
                   </TableRow>
@@ -534,6 +549,9 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                       <TableCell className="font-mono text-xs hidden md:table-cell">{citizen.last_name}</TableCell>
                       <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.date_of_birth}</TableCell>
                       <TableCell className="font-mono text-xs hidden sm:table-cell">{citizen.phone}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.crimes_count || 0}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.fines_count || 0}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.warnings_count || 0}</TableCell>
                       <TableCell>
                         {citizen.wanted_count > 0 && (
                           <Badge variant="destructive" className="font-mono text-xs">РОЗЫСК</Badge>
