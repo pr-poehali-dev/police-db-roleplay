@@ -159,6 +159,15 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
         wantedRes.json()
       ]);
 
+      if (!citizenData.rows || citizenData.rows.length === 0) {
+        toast({ 
+          variant: 'destructive', 
+          title: 'Гражданин не найден', 
+          description: `Гражданин с ID ${citizenId} не найден в базе данных` 
+        });
+        return;
+      }
+
       setSelectedCitizen({
         ...(citizenData.rows?.[0] || {}),
         criminalRecords: criminalData.rows || [],

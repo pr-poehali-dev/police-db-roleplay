@@ -107,6 +107,15 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
         citizenRes.json()
       ]);
 
+      if (!vehicleData.rows || vehicleData.rows.length === 0) {
+        toast({ 
+          variant: 'destructive', 
+          title: 'Транспортное средство не найдено', 
+          description: `ТС с ID ${vehicleId} не найдено в базе данных` 
+        });
+        return;
+      }
+
       setSelectedVehicle({
         ...(vehicleData.rows?.[0] || {}),
         owner: citizenData.rows?.[0] || null
