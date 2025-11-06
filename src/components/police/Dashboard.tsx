@@ -155,18 +155,6 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
 
       <main className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-200 rounded-md p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-red-500 rounded-sm flex items-center justify-center shadow-md">
-                <Icon name="AlertTriangle" className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-mono font-bold text-red-900">{stats.wantedCitizens}</p>
-                <p className="text-xs text-red-700 font-mono font-medium">ГРАЖДАН В РОЗЫСКЕ</p>
-              </div>
-            </div>
-          </div>
-
           <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-md p-4 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-green-500 rounded-sm flex items-center justify-center shadow-md">
@@ -175,6 +163,18 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
               <div>
                 <p className="text-2xl font-mono font-bold text-green-900">{stats.activePatrols}</p>
                 <p className="text-xs text-green-700 font-mono font-medium">АКТИВНЫХ ПАТРУЛЕЙ</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-200 rounded-md p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-500 rounded-sm flex items-center justify-center shadow-md">
+                <Icon name="AlertTriangle" className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-mono font-bold text-red-900">{stats.wantedCitizens}</p>
+                <p className="text-xs text-red-700 font-mono font-medium">ГРАЖДАН В РОЗЫСКЕ</p>
               </div>
             </div>
           </div>
@@ -205,7 +205,8 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
                 {wantedList.map((wanted) => (
                   <div
                     key={wanted.id}
-                    className="bg-white border-2 border-red-200 rounded-md p-3 flex items-center justify-between hover:bg-red-50 transition-colors"
+                    className="bg-white border-2 border-red-200 rounded-md p-3 flex items-center justify-between hover:bg-red-50 transition-colors cursor-pointer"
+                    onClick={() => handleOpenCitizen(wanted.citizen_id)}
                   >
                     <div className="flex items-center gap-3 flex-1">
                       <Badge variant="destructive" className="font-mono font-bold">
