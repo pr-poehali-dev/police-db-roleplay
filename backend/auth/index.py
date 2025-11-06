@@ -53,14 +53,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         dsn = os.environ.get('DATABASE_URL')
         conn = psycopg2.connect(dsn)
+        conn.autocommit = True
         cur = conn.cursor()
         
-        password_hash = password + 'hash'
+        password_hash = (password + 'hash').replace("'", "''")
+        username_safe = username.replace("'", "''")
         
-        cur.execute(
-            "SELECT id, username, role, full_name, badge_number FROM users WHERE username = %s AND password_hash = %s LIMIT 1",
-            (username, password_hash)
-        )
+        query = f"SELECT id, username, role, full_name, badge_number FROM users WHERE username = '{username_safe}' AND password_hash = '{password_hash}' LIMIT 1"
+        cur.execute(query)
         
         row = cur.fetchone()
         cur.close()
