@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,10 +23,12 @@ interface VehiclesTabProps {
 const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [allVehicles, setAllVehicles] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingAll, setIsLoadingAll] = useState(false);
   const { toast } = useToast();
 
   const [newVehicle, setNewVehicle] = useState({
@@ -40,6 +42,38 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
   });
 
   const canModify = user.role === 'admin' || user.role === 'moderator';
+
+  useEffect(() => {
+    if (canModify) {
+      fetchAllVehicles();
+    }
+  }, [canModify]);
+
+  const fetchAllVehicles = async () => {
+    if (!canModify) return;
+    
+    setIsLoadingAll(true);
+    try {
+      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `SELECT v.*, c.first_name, c.last_name, c.phone,
+                  (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = v.citizen_id AND w.is_active = true) as owner_wanted
+                  FROM vehicles v
+                  JOIN citizens c ON v.citizen_id = c.id
+                  WHERE v.is_active = true
+                  ORDER BY v.added_at DESC LIMIT 100`
+        })
+      });
+      const data = await response.json();
+      setAllVehicles(data.rows || []);
+    } catch (error) {
+      console.error('Failed to fetch all vehicles');
+    } finally {
+      setIsLoadingAll(false);
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
@@ -148,6 +182,7 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
       toast({ title: 'Успешно', description: 'ТС добавлено' });
       setIsAddDialogOpen(false);
       setNewVehicle({ citizenId: '', plateNumber: '', make: '', model: '', color: '', year: '', notes: '' });
+      fetchAllVehicles();
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось добавить ТС' });
     }
@@ -168,6 +203,7 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
       toast({ title: 'Успешно', description: 'ТС удалено' });
       setIsDetailsDialogOpen(false);
       setSearchResults(searchResults.filter(v => v.id !== vehicleId));
+      setAllVehicles(allVehicles.filter(v => v.id !== vehicleId));
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить ТС' });
     }
@@ -199,6 +235,59 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
               </Button>
             )}
           </div>
+
+          {canModify && allVehicles.length > 0 && searchResults.length === 0 && (
+            <div className="border-2 rounded-md overflow-x-auto">
+              <div className="bg-muted px-4 py-2 border-b">
+                <p className="font-mono text-sm font-bold">ВСЕ ТРАНСПОРТНЫЕ СРЕДСТВА ({allVehicles.length})</p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted">
+                    <TableHead className="font-mono text-xs">ГОС. НОМЕР</TableHead>
+                    <TableHead className="font-mono text-xs hidden md:table-cell">МАРКА / МОДЕЛЬ</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ЦВЕТ</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ГОД</TableHead>
+                    <TableHead className="font-mono text-xs hidden sm:table-cell">ВЛАДЕЛЕЦ</TableHead>
+                    <TableHead className="font-mono text-xs">СТАТУС</TableHead>
+                    <TableHead className="font-mono text-xs">ДЕЙСТВИЯ</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allVehicles.map((vehicle) => (
+                    <TableRow 
+                      key={vehicle.id}
+                      onClick={() => fetchVehicleDetails(vehicle.id)}
+                      className="cursor-pointer hover:bg-blue-50 transition-colors"
+                    >
+                      <TableCell className="font-mono font-bold text-xs">{vehicle.plate_number}</TableCell>
+                      <TableCell className="font-mono text-xs hidden md:table-cell">{vehicle.make} {vehicle.model}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{vehicle.color}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{vehicle.year}</TableCell>
+                      <TableCell className="font-mono text-xs hidden sm:table-cell">
+                        {vehicle.first_name} {vehicle.last_name}
+                      </TableCell>
+                      <TableCell>
+                        {vehicle.owner_wanted > 0 && (
+                          <Badge variant="destructive" className="font-mono text-xs">РОЗЫСК</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fetchVehicleDetails(vehicle.id)}
+                          className="font-mono text-xs"
+                        >
+                          <Icon name="Eye" className="w-3 h-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
           {searchResults.length > 0 && (
             <div className="border-2 rounded-md overflow-x-auto">

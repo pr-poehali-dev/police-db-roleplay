@@ -26,10 +26,12 @@ interface CitizensTabProps {
 const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [allCitizens, setAllCitizens] = useState<any[]>([]);
   const [selectedCitizen, setSelectedCitizen] = useState<any>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isAddCitizenOpen, setIsAddCitizenOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingAll, setIsLoadingAll] = useState(false);
   const { toast } = useToast();
 
   const [newCitizen, setNewCitizen] = useState({
@@ -72,6 +74,37 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       onCitizenOpened?.();
     }
   }, [citizenIdToOpen]);
+
+  useEffect(() => {
+    if (canModify) {
+      fetchAllCitizens();
+    }
+  }, [canModify]);
+
+  const fetchAllCitizens = async () => {
+    if (!canModify) return;
+    
+    setIsLoadingAll(true);
+    try {
+      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `SELECT c.*, 
+                  (SELECT COUNT(*) FROM wanted_list w WHERE w.citizen_id = c.id AND w.is_active = true) as wanted_count
+                  FROM citizens c 
+                  WHERE c.is_active = true 
+                  ORDER BY c.id DESC LIMIT 100`
+        })
+      });
+      const data = await response.json();
+      setAllCitizens(data.rows || []);
+    } catch (error) {
+      console.error('Failed to fetch all citizens');
+    } finally {
+      setIsLoadingAll(false);
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
@@ -203,6 +236,7 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
       toast({ title: 'Успешно', description: 'Гражданин добавлен' });
       setIsAddCitizenOpen(false);
       setNewCitizen({ firstName: '', lastName: '', dateOfBirth: '', address: '', phone: '', occupation: '', notes: '' });
+      fetchAllCitizens();
     } catch (error) {
       toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось добавить гражданина' });
     }
@@ -318,6 +352,84 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
     }
   };
 
+  const handleDeleteCitizen = async (citizenId: number) => {
+    if (!canModify) return;
+    
+    try {
+      await fetch('https://api.poehali.dev/v0/sql-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `UPDATE citizens SET is_active = false WHERE id = ${citizenId}`
+        })
+      });
+      
+      toast({ title: 'Успешно', description: 'Гражданин удален' });
+      setIsDetailsDialogOpen(false);
+      setSearchResults(searchResults.filter(c => c.id !== citizenId));
+      setAllCitizens(allCitizens.filter(c => c.id !== citizenId));
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить гражданина' });
+    }
+  };
+
+  const handleDeleteRecord = async (recordId: number) => {
+    if (!canModify) return;
+    
+    try {
+      await fetch('https://api.poehali.dev/v0/sql-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `UPDATE criminal_records SET is_active = false WHERE id = ${recordId}`
+        })
+      });
+      
+      toast({ title: 'Успешно', description: 'Запись удалена' });
+      fetchCitizenDetails(selectedCitizen.id);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить запись' });
+    }
+  };
+
+  const handleDeleteFine = async (fineId: number) => {
+    if (!canModify) return;
+    
+    try {
+      await fetch('https://api.poehali.dev/v0/sql-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `UPDATE fines SET is_active = false WHERE id = ${fineId}`
+        })
+      });
+      
+      toast({ title: 'Успешно', description: 'Штраф удален' });
+      fetchCitizenDetails(selectedCitizen.id);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить штраф' });
+    }
+  };
+
+  const handleDeleteWarning = async (warningId: number) => {
+    if (!canModify) return;
+    
+    try {
+      await fetch('https://api.poehali.dev/v0/sql-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `UPDATE warnings SET is_active = false WHERE id = ${warningId}`
+        })
+      });
+      
+      toast({ title: 'Успешно', description: 'Предупреждение удалено' });
+      fetchCitizenDetails(selectedCitizen.id);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить предупреждение' });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card className="border-2">
@@ -344,6 +456,57 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
               </Button>
             )}
           </div>
+
+          {canModify && allCitizens.length > 0 && searchResults.length === 0 && (
+            <div className="border-2 rounded-md overflow-x-auto">
+              <div className="bg-muted px-4 py-2 border-b">
+                <p className="font-mono text-sm font-bold">ВСЕ ГРАЖДАНЕ ({allCitizens.length})</p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted">
+                    <TableHead className="font-mono text-xs">ID</TableHead>
+                    <TableHead className="font-mono text-xs">ИМЯ</TableHead>
+                    <TableHead className="font-mono text-xs hidden md:table-cell">ФАМИЛИЯ</TableHead>
+                    <TableHead className="font-mono text-xs hidden lg:table-cell">ДАТА РОЖДЕНИЯ</TableHead>
+                    <TableHead className="font-mono text-xs hidden sm:table-cell">ТЕЛЕФОН</TableHead>
+                    <TableHead className="font-mono text-xs">СТАТУС</TableHead>
+                    <TableHead className="font-mono text-xs">ДЕЙСТВИЯ</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allCitizens.map((citizen) => (
+                    <TableRow 
+                      key={citizen.id}
+                      onClick={() => fetchCitizenDetails(citizen.id)}
+                      className="cursor-pointer hover:bg-blue-50 transition-colors"
+                    >
+                      <TableCell className="font-mono text-xs">{citizen.id}</TableCell>
+                      <TableCell className="font-mono text-xs">{citizen.first_name}</TableCell>
+                      <TableCell className="font-mono text-xs hidden md:table-cell">{citizen.last_name}</TableCell>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell">{citizen.date_of_birth}</TableCell>
+                      <TableCell className="font-mono text-xs hidden sm:table-cell">{citizen.phone}</TableCell>
+                      <TableCell>
+                        {citizen.wanted_count > 0 && (
+                          <Badge variant="destructive" className="font-mono text-xs">РОЗЫСК</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fetchCitizenDetails(citizen.id)}
+                          className="font-mono text-xs"
+                        >
+                          <Icon name="Eye" className="w-3 h-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
           {searchResults.length > 0 && (
             <div className="border-2 rounded-md overflow-x-auto">
@@ -520,6 +683,16 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                       <p className="font-mono">{selectedCitizen.notes}</p>
                     </div>
                   </div>
+                  {canModify && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDeleteCitizen(selectedCitizen.id)}
+                      className="w-full font-mono"
+                    >
+                      <Icon name="Trash2" className="w-4 h-4 mr-2" />
+                      УДАЛИТЬ ГРАЖДАНИНА ИЗ БАЗЫ
+                    </Button>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="criminal" className="space-y-6 mt-6">
@@ -579,13 +752,23 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                       <Card key={record.id} className="border">
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start">
-                            <div className="space-y-1">
+                            <div className="space-y-1 flex-1">
                               <p className="font-mono font-bold">{record.crime_type}</p>
                               <p className="font-mono text-sm">{record.description}</p>
                               <p className="font-mono text-xs text-muted-foreground">
                                 {record.date_committed} | {record.severity} | {record.status}
                               </p>
                             </div>
+                            {canModify && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteRecord(record.id)}
+                                className="font-mono ml-2"
+                              >
+                                <Icon name="Trash2" className="w-3 h-3" />
+                              </Button>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -633,14 +816,26 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                       <Card key={fine.id} className="border">
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start">
-                            <div>
+                            <div className="flex-1">
                               <p className="font-mono font-bold">{fine.amount} ₽</p>
                               <p className="font-mono text-sm">{fine.reason}</p>
                               <p className="font-mono text-xs text-muted-foreground">{fine.issued_at}</p>
                             </div>
-                            <Badge variant={fine.status === 'paid' ? 'default' : 'destructive'} className="font-mono">
-                              {fine.status === 'paid' ? 'ОПЛАЧЕН' : 'НЕ ОПЛАЧЕН'}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={fine.status === 'paid' ? 'default' : 'destructive'} className="font-mono">
+                                {fine.status === 'paid' ? 'ОПЛАЧЕН' : 'НЕ ОПЛАЧЕН'}
+                              </Badge>
+                              {canModify && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteFine(fine.id)}
+                                  className="font-mono"
+                                >
+                                  <Icon name="Trash2" className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -671,8 +866,22 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                     {selectedCitizen.warnings?.map((warning: any) => (
                       <Card key={warning.id} className="border">
                         <CardContent className="p-4">
-                          <p className="font-mono text-sm">{warning.warning_text}</p>
-                          <p className="font-mono text-xs text-muted-foreground">{warning.issued_at}</p>
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="font-mono text-sm">{warning.warning_text}</p>
+                              <p className="font-mono text-xs text-muted-foreground">{warning.issued_at}</p>
+                            </div>
+                            {canModify && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteWarning(warning.id)}
+                                className="font-mono ml-2"
+                              >
+                                <Icon name="Trash2" className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
                         </CardContent>
                       </Card>
                     ))}
