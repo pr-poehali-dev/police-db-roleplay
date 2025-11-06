@@ -22,7 +22,7 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
     return savedTab || 'citizens';
   });
   const [stats, setStats] = useState({
-    totalCitizens: 0,
+    wantedCitizens: 0,
     activePatrols: 0,
     unpaidFines: 0
   });
@@ -34,12 +34,12 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [citizensRes, patrolsRes, finesRes] = await Promise.all([
+        const [wantedRes, patrolsRes, finesRes] = await Promise.all([
           fetch('https://api.poehali.dev/v0/sql-query', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              query: `SELECT COUNT(*) as count FROM citizens WHERE is_active = true`
+              query: `SELECT COUNT(DISTINCT citizen_id) as count FROM wanted_list WHERE is_active = true`
             })
           }),
           fetch('https://api.poehali.dev/v0/sql-query', {
@@ -58,14 +58,14 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
           })
         ]);
 
-        const [citizensData, patrolsData, finesData] = await Promise.all([
-          citizensRes.json(),
+        const [wantedData, patrolsData, finesData] = await Promise.all([
+          wantedRes.json(),
           patrolsRes.json(),
           finesRes.json()
         ]);
 
         setStats({
-          totalCitizens: citizensData.rows?.[0]?.count || 0,
+          wantedCitizens: wantedData.rows?.[0]?.count || 0,
           activePatrols: patrolsData.rows?.[0]?.count || 0,
           unpaidFines: finesData.rows?.[0]?.count || 0
         });
@@ -120,12 +120,12 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-card border-2 border-border rounded-md p-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary/10 rounded-sm flex items-center justify-center">
-                <Icon name="Users" className="w-6 h-6 text-primary" />
+              <div className="w-12 h-12 bg-destructive/10 rounded-sm flex items-center justify-center">
+                <Icon name="AlertTriangle" className="w-6 h-6 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-mono font-bold">{stats.totalCitizens}</p>
-                <p className="text-xs text-muted-foreground font-mono">ГРАЖДАН В БАЗЕ</p>
+                <p className="text-2xl font-mono font-bold">{stats.wantedCitizens}</p>
+                <p className="text-xs text-muted-foreground font-mono">ГРАЖДАН В РОЗЫСКЕ</p>
               </div>
             </div>
           </div>
