@@ -42,6 +42,16 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
     notes: ''
   });
 
+  const [isEditVehicleOpen, setIsEditVehicleOpen] = useState(false);
+  const [editVehicle, setEditVehicle] = useState({
+    plateNumber: '',
+    make: '',
+    model: '',
+    color: '',
+    year: '',
+    notes: ''
+  });
+
   const canModify = user.role === 'admin' || user.role === 'moderator';
 
   useEffect(() => {
@@ -110,6 +120,24 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
   // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
   const handleDeleteVehicle = (vehicleId: number) => {
     if (!canModify) return;
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
+  };
+
+  const openEditVehicle = () => {
+    if (!canModify || !selectedVehicle) return;
+    setEditVehicle({
+      plateNumber: selectedVehicle.plate_number || '',
+      make: selectedVehicle.make || '',
+      model: selectedVehicle.model || '',
+      color: selectedVehicle.color || '',
+      year: selectedVehicle.year?.toString() || '',
+      notes: selectedVehicle.notes || ''
+    });
+    setIsEditVehicleOpen(true);
+  };
+
+  const handleUpdateVehicle = () => {
+    if (!canModify || !selectedVehicle) return;
     toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
@@ -342,21 +370,13 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
         <DialogContent className="max-w-7xl h-[95vh] overflow-y-auto">
           {selectedVehicle && (
             <>
-              <DialogHeader className="relative pb-6 border-b">
+              <DialogHeader className="pb-6 border-b">
                 <DialogTitle className="font-mono flex items-center gap-2 text-2xl font-bold">
                   ТС #{selectedVehicle.id} - {selectedVehicle.plate_number}
                   {selectedVehicle.owner?.wanted_count > 0 && (
                     <Badge variant="destructive" className="font-mono">ВЛАДЕЛЕЦ В РОЗЫСКЕ</Badge>
                   )}
                 </DialogTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0"
-                  onClick={() => setIsDetailsDialogOpen(false)}
-                >
-                  <Icon name="X" className="h-4 w-4" />
-                </Button>
               </DialogHeader>
 
               <div className="space-y-6">
@@ -437,18 +457,100 @@ const VehiclesTab = ({ user, onOpenCitizen }: VehiclesTabProps) => {
                 )}
 
                 {canModify && (
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDeleteVehicle(selectedVehicle.id)}
-                    className="w-full font-mono"
-                  >
-                    <Icon name="Trash2" className="w-4 h-4 mr-2" />
-                    УДАЛИТЬ ТС
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={openEditVehicle}
+                      className="flex-1 font-mono"
+                    >
+                      <Icon name="Edit" className="w-4 h-4 mr-2" />
+                      РЕДАКТИРОВАТЬ
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDeleteVehicle(selectedVehicle.id)}
+                      className="flex-1 font-mono"
+                    >
+                      <Icon name="Trash2" className="w-4 h-4 mr-2" />
+                      УДАЛИТЬ
+                    </Button>
+                  </div>
                 )}
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditVehicleOpen} onOpenChange={setIsEditVehicleOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-mono">РЕДАКТИРОВАТЬ ТРАНСПОРТНОЕ СРЕДСТВО</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="font-mono">ГОС. НОМЕР</Label>
+              <Input
+                value={editVehicle.plateNumber}
+                onChange={(e) => setEditVehicle({ ...editVehicle, plateNumber: e.target.value })}
+                placeholder="А123БВ777"
+                className="font-mono"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="font-mono">МАРКА</Label>
+                <Input
+                  value={editVehicle.make}
+                  onChange={(e) => setEditVehicle({ ...editVehicle, make: e.target.value })}
+                  placeholder="Toyota"
+                  className="font-mono"
+                />
+              </div>
+              <div>
+                <Label className="font-mono">МОДЕЛЬ</Label>
+                <Input
+                  value={editVehicle.model}
+                  onChange={(e) => setEditVehicle({ ...editVehicle, model: e.target.value })}
+                  placeholder="Camry"
+                  className="font-mono"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="font-mono">ЦВЕТ</Label>
+                <Input
+                  value={editVehicle.color}
+                  onChange={(e) => setEditVehicle({ ...editVehicle, color: e.target.value })}
+                  placeholder="Черный"
+                  className="font-mono"
+                />
+              </div>
+              <div>
+                <Label className="font-mono">ГОД</Label>
+                <Input
+                  type="number"
+                  value={editVehicle.year}
+                  onChange={(e) => setEditVehicle({ ...editVehicle, year: e.target.value })}
+                  placeholder="2020"
+                  className="font-mono"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="font-mono">ЗАМЕТКИ</Label>
+              <Textarea
+                value={editVehicle.notes}
+                onChange={(e) => setEditVehicle({ ...editVehicle, notes: e.target.value })}
+                placeholder="Дополнительная информация"
+                className="font-mono"
+              />
+            </div>
+            <Button onClick={handleUpdateVehicle} className="w-full font-mono">
+              СОХРАНИТЬ ИЗМЕНЕНИЯ
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

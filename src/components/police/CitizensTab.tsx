@@ -63,7 +63,16 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
     warningText: ''
   });
 
-
+  const [isEditCitizenOpen, setIsEditCitizenOpen] = useState(false);
+  const [editCitizen, setEditCitizen] = useState({
+    citizenId: '',
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    address: '',
+    phone: '',
+    notes: ''
+  });
 
   const [wantedReason, setWantedReason] = useState('');
 
@@ -251,6 +260,25 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
   // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
   const handleDeleteWarning = (warningId: number) => {
     if (!canModify) return;
+    toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
+  };
+
+  const openEditCitizen = () => {
+    if (!canModify || !selectedCitizen) return;
+    setEditCitizen({
+      citizenId: selectedCitizen.citizen_id || '',
+      firstName: selectedCitizen.first_name || '',
+      lastName: selectedCitizen.last_name || '',
+      dateOfBirth: selectedCitizen.date_of_birth || '',
+      address: selectedCitizen.address || '',
+      phone: selectedCitizen.phone || '',
+      notes: selectedCitizen.notes || ''
+    });
+    setIsEditCitizenOpen(true);
+  };
+
+  const handleUpdateCitizen = () => {
+    if (!canModify || !selectedCitizen) return;
     toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
@@ -482,21 +510,13 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
         <DialogContent className="max-w-7xl h-[95vh] overflow-y-auto">
           {selectedCitizen && (
             <>
-              <DialogHeader className="relative pb-6 border-b">
+              <DialogHeader className="pb-6 border-b">
                 <DialogTitle className="font-mono flex items-center gap-2 text-2xl font-bold">
                   ДОСЬЕ #{selectedCitizen.id} - {selectedCitizen.first_name} {selectedCitizen.last_name}
                   {selectedCitizen.wanted?.length > 0 && (
                     <Badge variant="destructive" className="font-mono">В РОЗЫСКЕ</Badge>
                   )}
                 </DialogTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0"
-                  onClick={() => setIsDetailsDialogOpen(false)}
-                >
-                  <Icon name="X" className="h-4 w-4" />
-                </Button>
               </DialogHeader>
 
               <Tabs defaultValue="info" className="w-full mt-8">
@@ -532,14 +552,24 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
                     </div>
                   </div>
                   {canModify && (
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleDeleteCitizen(selectedCitizen.id)}
-                      className="w-full font-mono"
-                    >
-                      <Icon name="Trash2" className="w-4 h-4 mr-2" />
-                      УДАЛИТЬ ГРАЖДАНИНА ИЗ БАЗЫ
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={openEditCitizen}
+                        className="flex-1 font-mono"
+                      >
+                        <Icon name="Edit" className="w-4 h-4 mr-2" />
+                        РЕДАКТИРОВАТЬ
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleDeleteCitizen(selectedCitizen.id)}
+                        className="flex-1 font-mono"
+                      >
+                        <Icon name="Trash2" className="w-4 h-4 mr-2" />
+                        УДАЛИТЬ
+                      </Button>
+                    </div>
                   )}
                 </TabsContent>
 
@@ -784,6 +814,79 @@ const CitizensTab = ({ user, citizenIdToOpen, onCitizenOpened }: CitizensTabProp
               </Tabs>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditCitizenOpen} onOpenChange={setIsEditCitizenOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-mono">РЕДАКТИРОВАТЬ ГРАЖДАНИНА</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="font-mono">ID-КАРТА</Label>
+              <Input
+                value={editCitizen.citizenId}
+                onChange={(e) => setEditCitizen({ ...editCitizen, citizenId: e.target.value })}
+                placeholder="ID-00001"
+                className="font-mono"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="font-mono">ИМЯ</Label>
+                <Input
+                  value={editCitizen.firstName}
+                  onChange={(e) => setEditCitizen({ ...editCitizen, firstName: e.target.value })}
+                  className="font-mono"
+                />
+              </div>
+              <div>
+                <Label className="font-mono">ФАМИЛИЯ</Label>
+                <Input
+                  value={editCitizen.lastName}
+                  onChange={(e) => setEditCitizen({ ...editCitizen, lastName: e.target.value })}
+                  className="font-mono"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="font-mono">ДАТА РОЖДЕНИЯ</Label>
+              <Input
+                type="date"
+                value={editCitizen.dateOfBirth}
+                onChange={(e) => setEditCitizen({ ...editCitizen, dateOfBirth: e.target.value })}
+                className="font-mono"
+              />
+            </div>
+            <div>
+              <Label className="font-mono">АДРЕС</Label>
+              <Input
+                value={editCitizen.address}
+                onChange={(e) => setEditCitizen({ ...editCitizen, address: e.target.value })}
+                className="font-mono"
+              />
+            </div>
+            <div>
+              <Label className="font-mono">ТЕЛЕФОН</Label>
+              <Input
+                value={editCitizen.phone}
+                onChange={(e) => setEditCitizen({ ...editCitizen, phone: e.target.value })}
+                className="font-mono"
+              />
+            </div>
+            <div>
+              <Label className="font-mono">ЗАМЕТКИ</Label>
+              <Textarea
+                value={editCitizen.notes}
+                onChange={(e) => setEditCitizen({ ...editCitizen, notes: e.target.value })}
+                className="font-mono"
+              />
+            </div>
+            <Button onClick={handleUpdateCitizen} className="w-full font-mono">
+              СОХРАНИТЬ ИЗМЕНЕНИЯ
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

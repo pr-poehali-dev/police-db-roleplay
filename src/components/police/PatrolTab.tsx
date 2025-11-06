@@ -12,6 +12,8 @@ import { MOCK_PATROLS } from '@/utils/mockData';
 interface User {
   id: number;
   role: string;
+  username: string;
+  fullName?: string;
 }
 
 const STATUS_COLORS = {
@@ -68,6 +70,12 @@ const PatrolTab = ({ user }: { user: User }) => {
 
   const canModify = user.role === 'admin' || user.role === 'moderator';
 
+  // Проверка, может ли пользователь управлять экипажем
+  const canManagePatrol = (patrol: any) => {
+    if (user.role === 'admin' || user.role === 'moderator') return true;
+    return patrol.officer_1 === user.id || patrol.officer_2 === user.id;
+  };
+
   // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
   const fetchPatrols = () => {
     setIsLoading(true);
@@ -84,7 +92,7 @@ const PatrolTab = ({ user }: { user: User }) => {
 
   // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
   const handleAddPatrol = () => {
-    if (!canModify) return;
+    // Для обычных пользователей автоматически устанавливаем officer1 = текущий пользователь
     toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
@@ -95,6 +103,11 @@ const PatrolTab = ({ user }: { user: User }) => {
   };
 
   const openEditDialog = (patrol: any) => {
+    if (!canManagePatrol(patrol)) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Вы можете редактировать только свои экипажи' });
+      return;
+    }
+    
     setEditingPatrol(patrol);
     setEditPatrol({
       unitName: patrol.unit_name,
@@ -109,7 +122,11 @@ const PatrolTab = ({ user }: { user: User }) => {
   };
 
   const initiateStatusChange = (patrolId: number, newStatus: string) => {
-    if (!canModify) return;
+    const patrol = patrols.find(p => p.id === patrolId);
+    if (!patrol || !canManagePatrol(patrol)) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Вы можете изменять статус только своих экипажей' });
+      return;
+    }
     
     if (STATUSES_REQUIRING_REASON.includes(newStatus)) {
       setStatusChangeData({ patrolId, newStatus, reason: '' });
@@ -150,7 +167,14 @@ const PatrolTab = ({ user }: { user: User }) => {
 
   // ⚠️ ИСПОЛЬЗУЮТСЯ MOCK-ДАННЫЕ (БД временно отключена из-за лимита)
   const handleDeletePatrol = (patrolId: number) => {
-    if (!canModify) return;
+    const patrol = patrols.find(p => p.id === patrolId);
+    if (!patrol) return;
+    
+    if (!canManagePatrol(patrol)) {
+      toast({ variant: 'destructive', title: 'Ошибка', description: 'Вы можете удалять только свои экипажи' });
+      return;
+    }
+    
     toast({ variant: 'destructive', title: 'MOCK-РЕЖИМ', description: 'База данных временно отключена из-за лимита запросов' });
   };
 
@@ -176,14 +200,13 @@ const PatrolTab = ({ user }: { user: User }) => {
                 <Icon name="RefreshCw" className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 {isLoading ? 'ЗАГРУЗКА...' : 'ОБНОВИТЬ'}
               </Button>
-              {canModify && (
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="font-mono">
-                      <Icon name="Plus" className="w-4 h-4 mr-2" />
-                      СОЗДАТЬ ЭКИПАЖ
-                    </Button>
-                  </DialogTrigger>
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="font-mono">
+                    <Icon name="Plus" className="w-4 h-4 mr-2" />
+                    СОЗДАТЬ ЭКИПАЖ
+                  </Button>
+                </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle className="font-mono">СОЗДАТЬ ПАТРУЛЬНЫЙ ЭКИПАЖ</DialogTitle>
@@ -218,18 +241,26 @@ const PatrolTab = ({ user }: { user: User }) => {
                     </div>
                     <div className="space-y-2">
                       <Label className="font-mono text-xs">ОФИЦЕР 1</Label>
-                      <select 
-                        value={newPatrol.officer1}
-                        onChange={(e) => setNewPatrol({ ...newPatrol, officer1: e.target.value })}
-                        className="w-full border rounded-md px-3 py-2 font-mono text-sm"
-                      >
-                        <option value="">Не выбран</option>
-                        {officers.map(officer => (
-                          <option key={officer.id} value={officer.id}>
-                            {officer.full_name} ({officer.badge_number})
-                          </option>
-                        ))}
-                      </select>
+                      {canModify ? (
+                        <select 
+                          value={newPatrol.officer1}
+                          onChange={(e) => setNewPatrol({ ...newPatrol, officer1: e.target.value })}
+                          className="w-full border rounded-md px-3 py-2 font-mono text-sm"
+                        >
+                          <option value="">Не выбран</option>
+                          {officers.map(officer => (
+                            <option key={officer.id} value={officer.id}>
+                              {officer.full_name} ({officer.badge_number})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Input 
+                          value={user.fullName || user.username}
+                          disabled
+                          className="font-mono bg-gray-100"
+                        />
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label className="font-mono text-xs">ОФИЦЕР 2</Label>
@@ -276,7 +307,6 @@ const PatrolTab = ({ user }: { user: User }) => {
                   </Button>
                 </DialogContent>
               </Dialog>
-              )}
             </div>
           </div>
         </CardHeader>
@@ -339,7 +369,7 @@ const PatrolTab = ({ user }: { user: User }) => {
                         </div>
                       </div>
                       
-                      {canModify && (
+                      {canManagePatrol(patrol) && (
                         <div className="flex gap-2 pt-2 border-t">
                           <select
                             value={patrol.status}
@@ -424,6 +454,7 @@ const PatrolTab = ({ user }: { user: User }) => {
                   value={editPatrol.officer1}
                   onChange={(e) => setEditPatrol({ ...editPatrol, officer1: e.target.value })}
                   className="w-full border rounded-md px-3 py-2 font-mono text-sm"
+                  disabled={!canModify && editingPatrol?.officer_1 === user.id}
                 >
                   <option value="">Не выбран</option>
                   {officers.map(officer => (
