@@ -21,41 +21,20 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://api.poehali.dev/v0/sql-query', {
+      const response = await fetch('https://functions.poehali.dev/e43dcca7-5546-4d94-849e-45ba4703689b', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `SELECT id, username, role, full_name, badge_number, password_hash FROM users WHERE username = '${username}' LIMIT 1`
-        })
+        body: JSON.stringify({ username, password })
       });
 
       const data = await response.json();
       
-      if (data.rows && data.rows.length > 0) {
-        const user = data.rows[0];
-        const expectedHash = password + 'hash';
+      if (data.success && data.user) {
+        const expiresAt = Date.now() + (rememberMe ? 30 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000);
+        const sessionData = { user: data.user, expiresAt };
         
-        if (user.password_hash === expectedHash) {
-          const userData = {
-            id: user.id,
-            username: user.username,
-            role: user.role,
-            fullName: user.full_name,
-            badgeNumber: user.badge_number
-          };
-          
-          const expiresAt = Date.now() + (rememberMe ? 30 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000);
-          const sessionData = { user: userData, expiresAt };
-          
-          localStorage.setItem('policeSession', JSON.stringify(sessionData));
-          onLogin(userData);
-        } else {
-          toast({
-            variant: 'destructive',
-            title: 'Ошибка входа',
-            description: 'Неверное имя пользователя или пароль'
-          });
-        }
+        localStorage.setItem('policeSession', JSON.stringify(sessionData));
+        onLogin(data.user);
       } else {
         toast({
           variant: 'destructive',

@@ -1,0 +1,42 @@
+{
+  "tests": [
+    {
+      "name": "Successful login with admin",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "username": "admin",
+        "password": "admin123"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "user": {
+          "username": "admin",
+          "role": "admin"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Failed login with wrong password",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "username": "admin",
+        "password": "wrongpass"
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "success": false
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "CORS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}
