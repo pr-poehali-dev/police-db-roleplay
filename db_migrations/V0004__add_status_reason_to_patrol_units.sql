@@ -1,0 +1,1 @@
+ALTER TABLE patrol_units ADD COLUMN status_reason TEXT;
