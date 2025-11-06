@@ -21,10 +21,63 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
     const savedTab = localStorage.getItem('policeActiveTab');
     return savedTab || 'citizens';
   });
+  const [stats, setStats] = useState({
+    totalCitizens: 0,
+    activePatrols: 0,
+    unpaidFines: 0
+  });
 
   useEffect(() => {
     localStorage.setItem('policeActiveTab', activeTab);
   }, [activeTab]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [citizensRes, patrolsRes, finesRes] = await Promise.all([
+          fetch('https://api.poehali.dev/v0/sql-query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: `SELECT COUNT(*) as count FROM citizens WHERE is_active = true`
+            })
+          }),
+          fetch('https://api.poehali.dev/v0/sql-query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: `SELECT COUNT(*) as count FROM patrol_units WHERE is_active = true AND status != 'offline'`
+            })
+          }),
+          fetch('https://api.poehali.dev/v0/sql-query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: `SELECT COUNT(*) as count FROM fines WHERE is_active = true AND status = 'unpaid'`
+            })
+          })
+        ]);
+
+        const [citizensData, patrolsData, finesData] = await Promise.all([
+          citizensRes.json(),
+          patrolsRes.json(),
+          finesRes.json()
+        ]);
+
+        setStats({
+          totalCitizens: citizensData.rows?.[0]?.count || 0,
+          activePatrols: patrolsData.rows?.[0]?.count || 0,
+          unpaidFines: finesData.rows?.[0]?.count || 0
+        });
+      } catch (error) {
+        console.error('Failed to fetch stats');
+      }
+    };
+
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -64,6 +117,44 @@ const Dashboard = ({ user, onLogout }: DashboardProps) => {
       </header>
 
       <main className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-card border-2 border-border rounded-md p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-primary/10 rounded-sm flex items-center justify-center">
+                <Icon name="Users" className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-mono font-bold">{stats.totalCitizens}</p>
+                <p className="text-xs text-muted-foreground font-mono">ГРАЖДАН В БАЗЕ</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-card border-2 border-border rounded-md p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-green-500/10 rounded-sm flex items-center justify-center">
+                <Icon name="Car" className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-mono font-bold">{stats.activePatrols}</p>
+                <p className="text-xs text-muted-foreground font-mono">АКТИВНЫХ ПАТРУЛЕЙ</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-card border-2 border-border rounded-md p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-destructive/10 rounded-sm flex items-center justify-center">
+                <Icon name="AlertCircle" className="w-6 h-6 text-destructive" />
+              </div>
+              <div>
+                <p className="text-2xl font-mono font-bold">{stats.unpaidFines}</p>
+                <p className="text-xs text-muted-foreground font-mono">НЕОПЛАЧЕННЫХ ШТРАФОВ</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-2 h-12 bg-muted">
             <TabsTrigger 
