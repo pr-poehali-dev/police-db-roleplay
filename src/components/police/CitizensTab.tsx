@@ -54,14 +54,7 @@ const CitizensTab = ({ user }: { user: User }) => {
     warningText: ''
   });
 
-  const [newVehicle, setNewVehicle] = useState({
-    plateNumber: '',
-    make: '',
-    model: '',
-    color: '',
-    year: '',
-    notes: ''
-  });
+
 
   const [wantedReason, setWantedReason] = useState('');
 
@@ -106,7 +99,7 @@ const CitizensTab = ({ user }: { user: User }) => {
 
   const fetchCitizenDetails = async (citizenId: number) => {
     try {
-      const [citizenRes, criminalRes, finesRes, warningsRes, vehiclesRes, wantedRes] = await Promise.all([
+      const [citizenRes, criminalRes, finesRes, warningsRes, wantedRes] = await Promise.all([
         fetch('https://api.poehali.dev/v0/sql-query', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -135,13 +128,7 @@ const CitizensTab = ({ user }: { user: User }) => {
             query: `SELECT * FROM warnings WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY issued_at DESC`
           })
         }),
-        fetch('https://api.poehali.dev/v0/sql-query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `SELECT * FROM vehicles WHERE citizen_id = ${citizenId} AND is_active = true ORDER BY added_at DESC`
-          })
-        }),
+
         fetch('https://api.poehali.dev/v0/sql-query', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -151,12 +138,11 @@ const CitizensTab = ({ user }: { user: User }) => {
         })
       ]);
 
-      const [citizenData, criminalData, finesData, warningsData, vehiclesData, wantedData] = await Promise.all([
+      const [citizenData, criminalData, finesData, warningsData, wantedData] = await Promise.all([
         citizenRes.json(),
         criminalRes.json(),
         finesRes.json(),
         warningsRes.json(),
-        vehiclesRes.json(),
         wantedRes.json()
       ]);
 
@@ -165,7 +151,6 @@ const CitizensTab = ({ user }: { user: User }) => {
         criminalRecords: criminalData.rows || [],
         fines: finesData.rows || [],
         warnings: warningsData.rows || [],
-        vehicles: vehiclesData.rows || [],
         wanted: wantedData.rows || []
       });
       setIsDetailsDialogOpen(true);
@@ -268,50 +253,7 @@ const CitizensTab = ({ user }: { user: User }) => {
     }
   };
 
-  const handleAddVehicle = async () => {
-    if (!canModify || !selectedCitizen) return;
-    
-    try {
-      const plate = newVehicle.plateNumber.replace(/'/g, "''");
-      const make = newVehicle.make.replace(/'/g, "''");
-      const model = newVehicle.model.replace(/'/g, "''");
-      const color = newVehicle.color.replace(/'/g, "''");
-      const notes = newVehicle.notes.replace(/'/g, "''");
 
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `INSERT INTO vehicles (citizen_id, plate_number, make, model, color, year, notes, added_by) VALUES (${selectedCitizen.id}, '${plate}', '${make}', '${model}', '${color}', ${newVehicle.year || 'NULL'}, '${notes}', ${user.id})`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'ТС добавлено' });
-      setNewVehicle({ plateNumber: '', make: '', model: '', color: '', year: '', notes: '' });
-      fetchCitizenDetails(selectedCitizen.id);
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось добавить ТС' });
-    }
-  };
-
-  const handleDeleteVehicle = async (vehicleId: number) => {
-    if (!canModify) return;
-    
-    try {
-      await fetch('https://api.poehali.dev/v0/sql-query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `UPDATE vehicles SET is_active = false WHERE id = ${vehicleId}`
-        })
-      });
-      
-      toast({ title: 'Успешно', description: 'ТС удалено' });
-      fetchCitizenDetails(selectedCitizen.id);
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Ошибка', description: 'Не удалось удалить ТС' });
-    }
-  };
 
   const handleAddToWanted = async () => {
     if (!canModify || !selectedCitizen || !wantedReason.trim()) return;
@@ -367,7 +309,7 @@ const CitizensTab = ({ user }: { user: User }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="font-mono"
+              className="font-mono flex-1"
             />
             <Button onClick={handleSearch} disabled={isSearching} className="font-mono">
               <Icon name="Search" className="w-4 h-4 mr-2" />
@@ -513,12 +455,11 @@ const CitizensTab = ({ user }: { user: User }) => {
               </DialogHeader>
 
               <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid grid-cols-6 font-mono">
+                <TabsList className="grid grid-cols-5 font-mono">
                   <TabsTrigger value="info">ИНФОРМАЦИЯ</TabsTrigger>
                   <TabsTrigger value="criminal">ПРЕСТУПЛЕНИЯ</TabsTrigger>
                   <TabsTrigger value="fines">ШТРАФЫ</TabsTrigger>
                   <TabsTrigger value="warnings">ПРЕДУПРЕЖДЕНИЯ</TabsTrigger>
-                  <TabsTrigger value="vehicles">ТРАНСПОРТ</TabsTrigger>
                   <TabsTrigger value="wanted">РОЗЫСК</TabsTrigger>
                 </TabsList>
 
@@ -698,90 +639,6 @@ const CitizensTab = ({ user }: { user: User }) => {
                         <CardContent className="p-4">
                           <p className="font-mono text-sm">{warning.warning_text}</p>
                           <p className="font-mono text-xs text-muted-foreground">{warning.issued_at}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="vehicles" className="space-y-4">
-                  {canModify && (
-                    <Card className="border-2">
-                      <CardHeader>
-                        <CardTitle className="font-mono text-sm">ДОБАВИТЬ ТРАНСПОРТ</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <Input
-                          placeholder="Гос. номер"
-                          value={newVehicle.plateNumber}
-                          onChange={(e) => setNewVehicle({ ...newVehicle, plateNumber: e.target.value })}
-                          className="font-mono"
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            placeholder="Марка"
-                            value={newVehicle.make}
-                            onChange={(e) => setNewVehicle({ ...newVehicle, make: e.target.value })}
-                            className="font-mono"
-                          />
-                          <Input
-                            placeholder="Модель"
-                            value={newVehicle.model}
-                            onChange={(e) => setNewVehicle({ ...newVehicle, model: e.target.value })}
-                            className="font-mono"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            placeholder="Цвет"
-                            value={newVehicle.color}
-                            onChange={(e) => setNewVehicle({ ...newVehicle, color: e.target.value })}
-                            className="font-mono"
-                          />
-                          <Input
-                            type="number"
-                            placeholder="Год"
-                            value={newVehicle.year}
-                            onChange={(e) => setNewVehicle({ ...newVehicle, year: e.target.value })}
-                            className="font-mono"
-                          />
-                        </div>
-                        <Textarea
-                          placeholder="Заметки"
-                          value={newVehicle.notes}
-                          onChange={(e) => setNewVehicle({ ...newVehicle, notes: e.target.value })}
-                          className="font-mono"
-                        />
-                        <Button onClick={handleAddVehicle} className="w-full font-mono">
-                          ДОБАВИТЬ
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  )}
-                  <div className="space-y-2">
-                    {selectedCitizen.vehicles?.map((vehicle: any) => (
-                      <Card key={vehicle.id} className="border">
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-mono font-bold">{vehicle.plate_number}</p>
-                              <p className="font-mono text-sm">{vehicle.make} {vehicle.model}</p>
-                              <p className="font-mono text-xs text-muted-foreground">
-                                {vehicle.color} | {vehicle.year}
-                              </p>
-                              {vehicle.notes && <p className="font-mono text-xs mt-1">{vehicle.notes}</p>}
-                            </div>
-                            {canModify && (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => handleDeleteVehicle(vehicle.id)}
-                                className="font-mono"
-                              >
-                                <Icon name="Trash2" className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
                         </CardContent>
                       </Card>
                     ))}
